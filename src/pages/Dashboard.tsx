@@ -42,10 +42,12 @@ const Dashboard = () => {
       if (error) throw error;
 
       const stats = data.reduce((acc, ticket) => {
-        acc.total++;
-        acc[ticket.status]++;
+        acc.total_tickets++;
+        if (ticket.status === 'open') acc.open_tickets++;
+        if (ticket.status === 'in_progress') acc.in_progress_tickets++;
+        if (ticket.status === 'closed') acc.resolved_tickets++;
         return acc;
-      }, { total: 0, open: 0, in_progress: 0, closed: 0 });
+      }, { total_tickets: 0, open_tickets: 0, in_progress_tickets: 0, resolved_tickets: 0 });
 
       return stats;
     },
@@ -71,16 +73,16 @@ const Dashboard = () => {
   }, []);
 
   const stats = {
-    totalTickets: ticketMetrics?.total || 0,
-    openTickets: ticketMetrics?.open || 0,
-    inProgressTickets: ticketMetrics?.in_progress || 0,
+    totalTickets: ticketMetrics?.total_tickets || 0,
+    openTickets: ticketMetrics?.open_tickets || 0,
+    inProgressTickets: ticketMetrics?.in_progress_tickets || 0,
     averageResponseTime: "24 hours", // This could be calculated from actual data
   };
 
   const chartData = {
-    openTickets: ticketMetrics?.open || 0,
-    inProgressTickets: ticketMetrics?.in_progress || 0,
-    closedTickets: ticketMetrics?.closed || 0,
+    openTickets: ticketMetrics?.open_tickets || 0,
+    inProgressTickets: ticketMetrics?.in_progress_tickets || 0,
+    closedTickets: ticketMetrics?.resolved_tickets || 0,
   };
 
   return (
