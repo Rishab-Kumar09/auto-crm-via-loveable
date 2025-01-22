@@ -45,14 +45,14 @@ const Agents = () => {
           return;
         }
 
-        // Get all agents from the same company
+        // Get all agents from the same company, specifically selecting tickets where they are the assignee
         const { data: agentsData, error: agentsError } = await supabase
           .from('profiles')
           .select(`
             id,
             email,
             full_name,
-            tickets (
+            tickets!tickets_assignee_id_fkey (
               id,
               title,
               status,
@@ -63,6 +63,7 @@ const Agents = () => {
           .eq('company_id', adminProfile.company_id);
 
         if (agentsError) {
+          console.error('Error fetching agents:', agentsError);
           toast({
             title: "Error",
             description: "Could not fetch agents",
