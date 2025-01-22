@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Flag, UserPlus, CheckSquare, RefreshCw } from "lucide-react";
+import { Clock, MessageSquare, User, Flag, UserPlus, CheckSquare, RefreshCw, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -205,6 +205,31 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
+  const handleCloseTicket = async () => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: 'closed' })
+        .eq('id', ticket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Ticket closed successfully.",
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Error closing ticket:", error);
+      toast({
+        title: "Error",
+        description: "Failed to close ticket. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const canManageTicketStatus = userRole === 'admin' || userRole === 'agent';
 
   return (
@@ -220,6 +245,12 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                 <User className="w-4 h-4" />
                 <span>{ticket.customer.name}</span>
               </div>
+              {ticket.company && (
+                <div className="flex items-center space-x-1">
+                  <Building className="w-4 h-4" />
+                  <span>{ticket.company.name}</span>
+                </div>
+              )}
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
                 <span>{ticket.created_at}</span>
@@ -303,6 +334,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {userRole === 'customer' && ticket.status !== 'closed' && (
+            <div className="col-span-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleCloseTicket}
+              >
+                <CheckSquare className="w-4 h-4 mr-2" />
+                Close Ticket
+              </Button>
             </div>
           )}
 
