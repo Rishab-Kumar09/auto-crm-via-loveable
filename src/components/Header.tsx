@@ -1,4 +1,4 @@
-import { Search, Bell, LogOut } from "lucide-react";
+import { Search, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -45,17 +45,6 @@ const Header = () => {
         </div>
       </form>
       <div className="flex items-center space-x-4">
-        <button 
-          className="p-2 hover:bg-zendesk-background rounded-full transition-colors"
-          onClick={() => {
-            toast({
-              title: "Notifications",
-              description: "No new notifications at this time.",
-            });
-          }}
-        >
-          <Bell className="w-5 h-5 text-zendesk-secondary" />
-        </button>
         <Button
           variant="ghost"
           size="sm"
