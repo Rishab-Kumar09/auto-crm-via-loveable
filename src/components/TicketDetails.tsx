@@ -182,85 +182,24 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      // First, update the ticket
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id);
 
-      if (updateError) throw updateError;
-
-      // Then fetch the updated ticket data
-      const { data, error: fetchError } = await supabase
-        .from('tickets')
-        .select(`
-          *,
-          customer:profiles!tickets_customer_id_fkey (
-            id,
-            full_name,
-            email,
-            role
-          ),
-          assignedTo:profiles!tickets_assignee_id_fkey (
-            id,
-            full_name,
-            email,
-            role
-          ),
-          company:companies (
-            id,
-            name
-          )
-        `)
-        .eq('id', ticket.id)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      if (data) {
-        const formattedTicket: Ticket = {
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          status: data.status as TicketStatus,
-          priority: data.priority as TicketPriority,
-          customer: {
-            id: data.customer.id,
-            name: data.customer.full_name,
-            email: data.customer.email,
-            role: data.customer.role as UserRole,
-          },
-          ...(data.assignedTo && {
-            assignedTo: {
-              id: data.assignedTo.id,
-              name: data.assignedTo.full_name,
-              email: data.assignedTo.email,
-              role: data.assignedTo.role as UserRole,
-            },
-          }),
-          ...(data.company && {
-            company: {
-              id: data.company.id,
-              name: data.company.name,
-            },
-          }),
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-        };
-
-        // Update the local ticket state
-        Object.assign(ticket, formattedTicket);
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
         description: "Ticket updated successfully.",
       });
-    } catch (error: any) {
+
+      onClose();
+    } catch (error) {
       console.error("Error updating ticket:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update ticket. Please try again.",
+        description: "Failed to update ticket. Please try again.",
         variant: "destructive",
       });
     }
