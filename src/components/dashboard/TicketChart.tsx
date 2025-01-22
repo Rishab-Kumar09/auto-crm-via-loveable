@@ -49,7 +49,7 @@ const TicketChart = ({ data }: TicketChartProps) => {
                 dataKey="value"
                 radius={[4, 4, 0, 0]}
                 fill={STATUS_COLORS.open}
-                stroke={STATUS_COLORS.open}
+                fillOpacity={0.9}
               />
             </BarChart>
           </ResponsiveContainer>
