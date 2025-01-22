@@ -186,8 +186,26 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id)
-        .select()
-        .single();
+        .select(`
+          *,
+          customer:profiles!tickets_customer_id_fkey (
+            id,
+            full_name,
+            email,
+            role
+          ),
+          assignedTo:profiles!tickets_assignee_id_fkey (
+            id,
+            full_name,
+            email,
+            role
+          ),
+          company:companies (
+            id,
+            name
+          )
+        `)
+        .maybeSingle();
 
       if (error) {
         console.error("Error updating ticket:", error);
@@ -195,8 +213,39 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       }
 
       if (data) {
-        // Update the local ticket state to reflect changes
-        Object.assign(ticket, data);
+        // Format the data to match the Ticket type
+        const updatedTicket: Ticket = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          customer: {
+            id: data.customer.id,
+            name: data.customer.full_name,
+            email: data.customer.email,
+            role: data.customer.role,
+          },
+          ...(data.assignedTo && {
+            assignedTo: {
+              id: data.assignedTo.id,
+              name: data.assignedTo.full_name,
+              email: data.assignedTo.email,
+              role: data.assignedTo.role,
+            },
+          }),
+          ...(data.company && {
+            company: {
+              id: data.company.id,
+              name: data.company.name,
+            },
+          }),
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        };
+
+        // Update the local ticket state with the complete updated ticket
+        Object.assign(ticket, updatedTicket);
       }
 
       toast({
