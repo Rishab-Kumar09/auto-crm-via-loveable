@@ -25,7 +25,7 @@ interface CompanySelectProps {
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
   const [open, setOpen] = useState(false);
 
-  const { data: companies = [] } = useQuery({
+  const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,13 +34,21 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
         .order("name");
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
   const selectedCompany = companies.find(
     (company) => company.id === selectedId
   );
+
+  if (isLoading) {
+    return (
+      <Button variant="outline" className="w-full" disabled>
+        Loading companies...
+      </Button>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
