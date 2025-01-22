@@ -11,12 +11,18 @@ export interface User {
   role: UserRole;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+}
+
 export interface Ticket {
   id: string;
   title: string;
   description: string | null;
   customer: User;
   assignedTo?: User;
+  company?: Company;
   status: TicketStatus;
   priority: TicketPriority;
   created_at: string;

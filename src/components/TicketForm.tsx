@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import CompanySelect from "./CompanySelect";
 
 const TicketForm = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -30,6 +32,7 @@ const TicketForm = () => {
         title,
         description,
         customer_id: session.session.user.id,
+        company_id: companyId,
       });
 
       if (error) throw error;
@@ -41,6 +44,7 @@ const TicketForm = () => {
 
       setTitle("");
       setDescription("");
+      setCompanyId(null);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -54,6 +58,12 @@ const TicketForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto p-6 bg-white rounded-lg shadow">
+      <div>
+        <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+          Company
+        </label>
+        <CompanySelect onSelect={setCompanyId} selectedId={companyId} />
+      </div>
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
           Title

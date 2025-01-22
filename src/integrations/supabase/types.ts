@@ -162,6 +162,30 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           article_id: string | null
@@ -297,6 +321,7 @@ export type Database = {
       tickets: {
         Row: {
           assignee_id: string | null
+          company_id: string | null
           created_at: string | null
           customer_id: string
           description: string | null
@@ -308,6 +333,7 @@ export type Database = {
         }
         Insert: {
           assignee_id?: string | null
+          company_id?: string | null
           created_at?: string | null
           customer_id: string
           description?: string | null
@@ -319,6 +345,7 @@ export type Database = {
         }
         Update: {
           assignee_id?: string | null
+          company_id?: string | null
           created_at?: string | null
           customer_id?: string
           description?: string | null
@@ -334,6 +361,13 @@ export type Database = {
             columns: ["assignee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {

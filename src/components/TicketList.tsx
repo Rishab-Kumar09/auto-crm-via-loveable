@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Ticket, TicketStatus, UserRole } from "@/types/ticket";
 import { useState, useEffect } from "react";
-import { MessageSquare, User, Filter, Clock } from "lucide-react";
+import { MessageSquare, User, Filter, Clock, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TicketDetails from "./TicketDetails";
+import CompanySelect from "./CompanySelect";
 
 const TicketList = () => {
   const [searchParams] = useSearchParams();
@@ -23,6 +24,7 @@ const TicketList = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
 
@@ -63,6 +65,10 @@ const TicketList = () => {
               full_name,
               email,
               role
+            ),
+            company:companies (
+              id,
+              name
             )
           `);
 
@@ -96,6 +102,12 @@ const TicketList = () => {
               role: ticket.assignedTo.role as UserRole,
             },
           }),
+          ...(ticket.company && {
+            company: {
+              id: ticket.company.id,
+              name: ticket.company.name,
+            },
+          }),
           created_at: new Date(ticket.created_at).toLocaleString(),
           updated_at: new Date(ticket.updated_at).toLocaleString(),
         }));
@@ -123,8 +135,10 @@ const TicketList = () => {
       : true;
 
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+    
+    const matchesCompany = !companyFilter || ticket.company?.id === companyFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCompany;
   });
 
   const handleTicketClick = (ticket: Ticket) => {
@@ -219,6 +233,10 @@ const TicketList = () => {
           {searchQuery ? `Search Results (${filteredTickets.length})` : "All Tickets"}
         </h2>
         <div className="flex items-center gap-4">
+          <CompanySelect
+            selectedId={companyFilter}
+            onSelect={setCompanyFilter}
+          />
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TicketStatus | "all")}
@@ -252,6 +270,12 @@ const TicketList = () => {
                       <User className="w-4 h-4" />
                       <span>{ticket.customer.name}</span>
                     </div>
+                    {ticket.company && (
+                      <div className="flex items-center space-x-1">
+                        <Building className="w-4 h-4" />
+                        <span>{ticket.company.name}</span>
+                      </div>
+                    )}
                     <div className="flex items-center space-x-1">
                       <Clock className="w-4 h-4" />
                       <span>{ticket.created_at}</span>
