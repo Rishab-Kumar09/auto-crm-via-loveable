@@ -346,52 +346,6 @@ export type Database = {
           },
         ]
       }
-      ticket_assignments: {
-        Row: {
-          agent_id: string
-          assigned_at: string | null
-          assigned_by: string
-          id: string
-          ticket_id: string
-        }
-        Insert: {
-          agent_id: string
-          assigned_at?: string | null
-          assigned_by: string
-          id?: string
-          ticket_id: string
-        }
-        Update: {
-          agent_id?: string
-          assigned_at?: string | null
-          assigned_by?: string
-          id?: string
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_assignments_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ticket_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ticket_assignments_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ticket_metrics: {
         Row: {
           assignee_id: string | null
@@ -427,7 +381,7 @@ export type Database = {
           {
             foreignKeyName: "ticket_metrics_assignee_id_fkey"
             columns: ["assignee_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
