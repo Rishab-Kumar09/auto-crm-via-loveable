@@ -29,7 +29,14 @@ const TicketChart = ({ data }: TicketChartProps) => {
         <CardTitle>Ticket Status Distribution</CardTitle>
       </CardHeader>
       <CardContent className="h-[400px] p-4">
-        <ChartContainer className="w-full h-full">
+        <ChartContainer 
+          className="w-full h-full"
+          config={{
+            open: { color: STATUS_COLORS.open },
+            in_progress: { color: STATUS_COLORS.in_progress },
+            closed: { color: STATUS_COLORS.closed }
+          }}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={chartData}
@@ -51,9 +58,12 @@ const TicketChart = ({ data }: TicketChartProps) => {
               <Bar
                 dataKey="value"
                 radius={[4, 4, 0, 0]}
-                fill={(data) => {
-                  const status = data.status as keyof typeof STATUS_COLORS;
-                  return STATUS_COLORS[status];
+                fill={STATUS_COLORS.open}
+                fillOpacity={0.9}
+                stroke="none"
+                name={(entry) => {
+                  const status = entry.status as keyof typeof STATUS_COLORS;
+                  return status;
                 }}
               />
             </BarChart>
