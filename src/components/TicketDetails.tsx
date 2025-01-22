@@ -3,10 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User } from "lucide-react";
+import { Clock, MessageSquare, User, Flag, UserPlus, CheckSquare, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment, UserRole } from "@/types/ticket";
+import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -18,6 +25,44 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole>("customer");
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setUserRole(profile.role as UserRole);
+        }
+      }
+    };
+
+    const fetchAgents = async () => {
+      const { data: agentsData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'agent');
+      
+      if (agentsData) {
+        setAgents(agentsData.map(agent => ({
+          id: agent.id,
+          name: agent.full_name || 'Unknown Agent'
+        })));
+      }
+    };
+
+    fetchUserRole();
+    if (userRole === 'admin') {
+      fetchAgents();
+    }
+  }, [userRole]);
 
   useEffect(() => {
     fetchComments();
@@ -25,7 +70,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const fetchComments = async () => {
     try {
-      console.log("Fetching comments for ticket:", ticket.id);
       const { data: commentsData, error } = await supabase
         .from("comments")
         .select(`
@@ -40,21 +84,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .eq("ticket_id", ticket.id)
         .order("created_at", { ascending: true });
 
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-
-      if (!commentsData) {
-        console.log("No comments data returned");
-        setComments([]);
-        return;
-      }
-
-      console.log("Raw comments data:", commentsData);
+      if (error) throw error;
 
       const formattedComments = commentsData
-        .filter(comment => comment.user != null) // Filter out comments with null user data
+        .filter(comment => comment.user != null)
         .map((comment: any) => ({
           id: comment.id,
           ticketId: comment.ticket_id,
@@ -68,7 +101,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           created_at: new Date(comment.created_at).toLocaleString(),
         }));
 
-      console.log("Formatted comments:", formattedComments);
       setComments(formattedComments);
     } catch (error) {
       console.error("Error fetching comments:", error);
@@ -86,7 +118,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     if (!newComment.trim()) return;
 
     try {
-      // Get the current user's session
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error("No user found");
@@ -142,6 +173,32 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
+  const handleUpdateTicket = async (updates: Partial<Ticket>) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update(updates)
+        .eq('id', ticket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Ticket updated successfully.",
+      });
+
+      // Close the ticket details to refresh the list
+      onClose();
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update ticket. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6 space-y-6">
@@ -165,6 +222,77 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             Close
           </Button>
         </div>
+
+        {userRole === 'admin' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Priority</label>
+              <Select
+                value={ticket.priority}
+                onValueChange={(value) => handleUpdateTicket({ priority: value as TicketPriority })}
+              >
+                <SelectTrigger>
+                  <Flag className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Set priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <Select
+                value={ticket.status}
+                onValueChange={(value) => handleUpdateTicket({ status: value as TicketStatus })}
+              >
+                <SelectTrigger>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Set status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Assign Agent</label>
+              <Select
+                value={ticket.assignedTo?.id || ""}
+                onValueChange={(value) => handleUpdateTicket({ assignee_id: value })}
+              >
+                <SelectTrigger>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Assign agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleUpdateTicket({ status: 'closed' })}
+              >
+                <CheckSquare className="w-4 h-4 mr-2" />
+                Close Ticket
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>
