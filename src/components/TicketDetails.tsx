@@ -182,10 +182,16 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id)
+        .eq('id', ticket.id);
+
+      if (error) throw error;
+
+      // Fetch the updated ticket data
+      const { data: updatedTicket, error: fetchError } = await supabase
+        .from('tickets')
         .select(`
           *,
           customer:profiles!tickets_customer_id_fkey (
@@ -205,47 +211,45 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             name
           )
         `)
-        .maybeSingle();
+        .eq('id', ticket.id)
+        .single();
 
-      if (error) {
-        console.error("Error updating ticket:", error);
-        throw error;
-      }
+      if (fetchError) throw fetchError;
 
-      if (data) {
+      if (updatedTicket) {
         // Format the data to match the Ticket type
-        const updatedTicket: Ticket = {
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          status: data.status as TicketStatus,
-          priority: data.priority as TicketPriority,
+        const formattedTicket: Ticket = {
+          id: updatedTicket.id,
+          title: updatedTicket.title,
+          description: updatedTicket.description,
+          status: updatedTicket.status as TicketStatus,
+          priority: updatedTicket.priority as TicketPriority,
           customer: {
-            id: data.customer.id,
-            name: data.customer.full_name,
-            email: data.customer.email,
-            role: data.customer.role as UserRole,
+            id: updatedTicket.customer.id,
+            name: updatedTicket.customer.full_name,
+            email: updatedTicket.customer.email,
+            role: updatedTicket.customer.role as UserRole,
           },
-          ...(data.assignedTo && {
+          ...(updatedTicket.assignedTo && {
             assignedTo: {
-              id: data.assignedTo.id,
-              name: data.assignedTo.full_name,
-              email: data.assignedTo.email,
-              role: data.assignedTo.role as UserRole,
+              id: updatedTicket.assignedTo.id,
+              name: updatedTicket.assignedTo.full_name,
+              email: updatedTicket.assignedTo.email,
+              role: updatedTicket.assignedTo.role as UserRole,
             },
           }),
-          ...(data.company && {
+          ...(updatedTicket.company && {
             company: {
-              id: data.company.id,
-              name: data.company.name,
+              id: updatedTicket.company.id,
+              name: updatedTicket.company.name,
             },
           }),
-          created_at: data.created_at,
-          updated_at: data.updated_at,
+          created_at: updatedTicket.created_at,
+          updated_at: updatedTicket.updated_at,
         };
 
         // Update the local ticket state with the complete updated ticket
-        Object.assign(ticket, updatedTicket);
+        Object.assign(ticket, formattedTicket);
       }
 
       toast({
