@@ -50,6 +50,7 @@ const TicketChart = ({ data }: TicketChartProps) => {
                 radius={[4, 4, 0, 0]}
                 fill={STATUS_COLORS.open}
                 fillOpacity={0.9}
+                fill={(entry) => STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
               />
             </BarChart>
           </ResponsiveContainer>
