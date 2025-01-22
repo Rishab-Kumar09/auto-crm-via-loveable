@@ -42,25 +42,25 @@ const Dashboard = () => {
 
   const fetchStats = async (role: UserRole, userId: string, companyId: string | null) => {
     try {
-      let baseQuery = supabase.from('tickets');
+      let query = supabase.from('tickets').select('status');
 
       // Apply filters based on user role
       switch (role) {
         case 'customer':
-          baseQuery = baseQuery.eq('customer_id', userId);
+          query = query.eq('customer_id', userId);
           break;
         case 'agent':
-          baseQuery = baseQuery.eq('assignee_id', userId);
+          query = query.eq('assignee_id', userId);
           break;
         case 'admin':
           if (companyId) {
-            baseQuery = baseQuery.eq('company_id', companyId);
+            query = query.eq('company_id', companyId);
           }
           break;
       }
 
       // Get all tickets and their statuses in a single query
-      const { data: tickets, error } = await baseQuery.select('status');
+      const { data: tickets, error } = await query;
       
       if (error) {
         console.error('Error fetching tickets:', error);
@@ -68,21 +68,21 @@ const Dashboard = () => {
       }
 
       // Count tickets by status
-      const counts = tickets.reduce((acc, ticket) => {
+      const counts = (tickets || []).reduce((acc, ticket) => {
         const status = ticket.status || 'open';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       setStats({
-        totalTickets: tickets.length,
+        totalTickets: tickets?.length || 0,
         openTickets: counts['open'] || 0,
         inProgressTickets: counts['in_progress'] || 0,
         closedTickets: counts['closed'] || 0,
       });
 
       console.log('Stats updated:', {
-        total: tickets.length,
+        total: tickets?.length || 0,
         counts,
         role,
         userId,
@@ -127,18 +127,6 @@ const Dashboard = () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const pieChartData = [
-    { name: 'Open', value: stats.openTickets },
-    { name: 'In Progress', value: stats.inProgressTickets },
-    { name: 'Closed', value: stats.closedTickets },
-  ];
-
-  const barChartData = [
-    { name: 'Open', value: stats.openTickets },
-    { name: 'In Progress', value: stats.inProgressTickets },
-    { name: 'Closed', value: stats.closedTickets },
-  ];
 
   return (
     <div className="flex h-screen bg-zendesk-background">
