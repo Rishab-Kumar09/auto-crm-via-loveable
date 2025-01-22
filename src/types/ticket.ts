@@ -1,31 +1,32 @@
-export type TicketPriority = "Low" | "Medium" | "High";
-export type TicketStatus = "Open" | "Pending" | "Closed";
+import { Database } from "@/integrations/supabase/types";
+
+export type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
+export type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 export type UserRole = "customer" | "agent" | "admin";
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: UserRole;
 }
 
 export interface Ticket {
-  id: number;
-  subject: string;
-  description: string;
+  id: string;
+  title: string;
+  description: string | null;
   customer: User;
   assignedTo?: User;
   status: TicketStatus;
   priority: TicketPriority;
-  created: string;
-  updated: string;
-  comments: TicketComment[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TicketComment {
-  id: number;
-  ticketId: number;
+  id: string;
+  ticketId: string;
   user: User;
   content: string;
-  created: string;
+  created_at: string;
 }
