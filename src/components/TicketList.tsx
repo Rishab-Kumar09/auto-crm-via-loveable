@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Ticket, TicketStatus, UserRole } from "@/types/ticket";
+import { Ticket, TicketStatus, TicketPriority, UserRole } from "@/types/ticket";
 import { useState, useEffect } from "react";
-import { MessageSquare, User, Filter, Clock, Building } from "lucide-react";
+import { MessageSquare, User, Filter, Clock, Building, Flag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -24,6 +24,7 @@ const TicketList = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
@@ -164,9 +165,15 @@ const TicketList = () => {
       : true;
 
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
-    
+    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
     const matchesCompany = !companyFilter || ticket.company?.id === companyFilter;
 
+    // For admin users, only use priority filter
+    if (userRole === 'admin') {
+      return matchesSearch && matchesStatus && matchesPriority;
+    }
+    
+    // For other users, use company filter
     return matchesSearch && matchesStatus && matchesCompany;
   });
 
@@ -236,6 +243,19 @@ const TicketList = () => {
     }
   };
 
+  const getPriorityColor = (priority: TicketPriority) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8">
@@ -262,10 +282,29 @@ const TicketList = () => {
           {searchQuery ? `Search Results (${filteredTickets.length})` : "All Tickets"}
         </h2>
         <div className="flex items-center gap-4">
-          <CompanySelect
-            selectedId={companyFilter}
-            onSelect={setCompanyFilter}
-          />
+          {userRole !== 'admin' && (
+            <CompanySelect
+              selectedId={companyFilter}
+              onSelect={setCompanyFilter}
+            />
+          )}
+          {userRole === 'admin' && (
+            <Select
+              value={priorityFilter}
+              onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
+            >
+              <SelectTrigger className="w-[180px]">
+                <Flag className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="high">High Priority</SelectItem>
+                <SelectItem value="medium">Medium Priority</SelectItem>
+                <SelectItem value="low">Low Priority</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TicketStatus | "all")}
@@ -317,6 +356,12 @@ const TicketList = () => {
                     className={cn("text-xs", getStatusColor(ticket.status))}
                   >
                     {ticket.status.replace('_', ' ')}
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className={cn("text-xs", getPriorityColor(ticket.priority))}
+                  >
+                    {ticket.priority}
                   </Badge>
                   {!ticket.assignedTo && userRole === 'admin' && (
                     <Button
