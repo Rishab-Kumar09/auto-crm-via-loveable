@@ -26,20 +26,32 @@ const Customers = () => {
         if (profileError) throw profileError;
         if (!adminProfile?.company_id) throw new Error('No company associated with admin');
 
-        // Then fetch customers from that company
+        // Fetch customers who either belong to the company directly or have created tickets with the company
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select(`
             *,
             companies (
               name
+            ),
+            tickets!customer_id (
+              id,
+              company_id
             )
           `)
           .eq('role', 'customer')
-          .eq('company_id', adminProfile.company_id);
+          .or(`company_id.eq.${adminProfile.company_id},tickets.company_id.eq.${adminProfile.company_id}`);
 
         if (error) throw error;
-        setCustomers(profiles || []);
+
+        // Filter out duplicates and format the data
+        const uniqueCustomers = profiles?.filter((profile) => {
+          return profile.company_id === adminProfile.company_id || 
+                 profile.tickets?.some(ticket => ticket.company_id === adminProfile.company_id);
+        }) || [];
+
+        console.log('Fetched customers:', uniqueCustomers);
+        setCustomers(uniqueCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
