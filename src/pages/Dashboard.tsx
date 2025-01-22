@@ -4,18 +4,15 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserRole } from "@/types/ticket";
-import { BarChart as BarChartIcon, PieChart as PieChartIcon, TicketIcon, Users } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart as BarChartIcon, TicketIcon, Users, Clock } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 
-// Define consistent colors for ticket statuses
 const STATUS_COLORS = {
   open: "#ea384c",      // Red for Open
   in_progress: "#FFD700", // Darker Yellow for In Progress
   closed: "#22c55e"     // Lighter Green for Closed (using Tailwind's green-500)
 };
-
-const COLORS = [STATUS_COLORS.open, STATUS_COLORS.in_progress, STATUS_COLORS.closed];
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
@@ -24,6 +21,7 @@ const Dashboard = () => {
     openTickets: 0,
     inProgressTickets: 0,
     closedTickets: 0,
+    averageResponseTime: "N/A",
   });
 
   useEffect(() => {
@@ -48,9 +46,8 @@ const Dashboard = () => {
 
   const fetchStats = async (role: UserRole, userId: string, companyId: string | null) => {
     try {
-      let query = supabase.from('tickets').select('status');
+      let query = supabase.from('tickets').select('status, created_at, updated_at');
 
-      // Apply filters based on user role
       switch (role) {
         case 'customer':
           query = query.eq('customer_id', userId);
@@ -75,23 +72,24 @@ const Dashboard = () => {
       // Count tickets by status
       const counts = (tickets || []).reduce((acc, ticket) => {
         const status = ticket.status || 'open';
-        acc[status] = Math.round((acc[status] || 0) + 1); // Ensure whole numbers
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
-      setStats({
-        totalTickets: Math.round(tickets?.length || 0),
-        openTickets: Math.round(counts['open'] || 0),
-        inProgressTickets: Math.round(counts['in_progress'] || 0),
-        closedTickets: Math.round(counts['closed'] || 0),
-      });
+      // Calculate average response time (time between created_at and first update)
+      const responseTimes = tickets?.filter(t => t.updated_at && t.created_at)
+        .map(t => new Date(t.updated_at).getTime() - new Date(t.created_at).getTime());
+      
+      const avgResponseTime = responseTimes?.length 
+        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length / (1000 * 60 * 60)) // Convert to hours
+        : null;
 
-      console.log('Stats updated:', {
-        total: tickets?.length || 0,
-        counts,
-        role,
-        userId,
-        companyId
+      setStats({
+        totalTickets: tickets?.length || 0,
+        openTickets: counts['open'] || 0,
+        inProgressTickets: counts['in_progress'] || 0,
+        closedTickets: counts['closed'] || 0,
+        averageResponseTime: avgResponseTime ? `${avgResponseTime} hours` : "N/A",
       });
 
     } catch (error) {
@@ -140,7 +138,7 @@ const Dashboard = () => {
         <Header />
         <main className="flex-1 p-6 overflow-auto">
           <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            Dashboard
+            Dashboard Overview
           </h1>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
             <Card>
@@ -168,9 +166,9 @@ const Dashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  In Progress
+                  Active Agents
                 </CardTitle>
-                <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.inProgressTickets}</div>
@@ -179,111 +177,36 @@ const Dashboard = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Closed Tickets
+                  Avg. Response Time
                 </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.closedTickets}</div>
+                <div className="text-2xl font-bold">{stats.averageResponseTime}</div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket Status Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ChartContainer
-                  config={{
-                    bar1: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
-                    bar2: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
-                    bar3: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={[
-                      { name: 'Open', value: Math.round(stats.openTickets) },
-                      { name: 'In Progress', value: Math.round(stats.inProgressTickets) },
-                      { name: 'Closed', value: Math.round(stats.closedTickets) },
-                    ]}>
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <ChartTooltip
-                        content={({ active, payload }) => {
-                          if (!active || !payload) return null;
-                          const value = payload[0]?.value;
-                          return (
-                            <div className="rounded-lg border bg-background p-2 shadow-sm">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="flex flex-col">
-                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    Status
-                                  </span>
-                                  <span className="font-bold text-muted-foreground">
-                                    {payload[0].payload.name}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                    Count
-                                  </span>
-                                  <span className="font-bold">
-                                    {typeof value === 'number' ? Math.round(value) : 0}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Bar
-                        dataKey="value"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        {[
-                          { name: 'Open', value: stats.openTickets },
-                          { name: 'In Progress', value: stats.inProgressTickets },
-                          { name: 'Closed', value: stats.closedTickets },
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px]">
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Ticket Status Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ChartContainer
+                config={{
+                  bar1: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
+                  bar2: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
+                  bar3: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
+                }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Open', value: Math.round(stats.openTickets) },
-                        { name: 'In Progress', value: Math.round(stats.inProgressTickets) },
-                        { name: 'Closed', value: Math.round(stats.closedTickets) },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {[
-                        { name: 'Open', value: stats.openTickets },
-                        { name: 'In Progress', value: stats.inProgressTickets },
-                        { name: 'Closed', value: stats.closedTickets },
-                      ].map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                      ))}
-                    </Pie>
+                  <BarChart data={[
+                    { name: 'Open', value: stats.openTickets },
+                    { name: 'In Progress', value: stats.inProgressTickets },
+                    { name: 'Closed', value: stats.closedTickets },
+                  ]}>
+                    <XAxis dataKey="name" />
+                    <YAxis allowDecimals={false} />
                     <ChartTooltip
                       content={({ active, payload }) => {
                         if (!active || !payload) return null;
@@ -296,7 +219,7 @@ const Dashboard = () => {
                                   Status
                                 </span>
                                 <span className="font-bold text-muted-foreground">
-                                  {payload[0].name}
+                                  {payload[0].payload.name}
                                 </span>
                               </div>
                               <div className="flex flex-col">
@@ -304,7 +227,7 @@ const Dashboard = () => {
                                   Count
                                 </span>
                                 <span className="font-bold">
-                                  {typeof value === 'number' ? Math.round(value) : 0}
+                                  {typeof value === 'number' ? value : 0}
                                 </span>
                               </div>
                             </div>
@@ -312,11 +235,15 @@ const Dashboard = () => {
                         );
                       }}
                     />
-                  </PieChart>
+                    <Bar
+                      dataKey="value"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+              </ChartContainer>
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
