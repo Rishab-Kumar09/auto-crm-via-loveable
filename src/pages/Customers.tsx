@@ -4,16 +4,17 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import CompanySelect from "@/components/CompanySelect";
 
 const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        // First get the user's profile to check role and company_id
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
@@ -24,7 +25,20 @@ const Customers = () => {
           .single();
 
         if (profileError) throw profileError;
-        if (!userProfile?.company_id) throw new Error('No company associated with user');
+
+        // For admin, use selected company. For others, use their company_id
+        const companyId = userProfile?.role === 'admin' 
+          ? selectedCompanyId 
+          : userProfile?.company_id;
+
+        if (!companyId) {
+          if (userProfile?.role === 'admin') {
+            setCustomers([]);
+            setLoading(false);
+            return;
+          }
+          throw new Error('No company associated with user');
+        }
 
         // Get customers directly associated with company
         const { data: companyCustomers, error: companyError } = await supabase
@@ -36,7 +50,7 @@ const Customers = () => {
             )
           `)
           .eq('role', 'customer')
-          .eq('company_id', userProfile.company_id);
+          .eq('company_id', companyId);
 
         if (companyError) throw companyError;
 
@@ -54,7 +68,7 @@ const Customers = () => {
             )
           `)
           .eq('role', 'customer')
-          .eq('tickets.company_id', userProfile.company_id);
+          .eq('tickets.company_id', companyId);
 
         if (ticketError) throw ticketError;
 
@@ -77,7 +91,7 @@ const Customers = () => {
     };
 
     fetchCustomers();
-  }, [toast]);
+  }, [toast, selectedCompanyId]);
 
   return (
     <div className="flex h-screen bg-zendesk-background">
@@ -89,6 +103,10 @@ const Customers = () => {
             Company Customers
           </h1>
           <div className="grid gap-4">
+            <CompanySelect 
+              onSelect={setSelectedCompanyId}
+              selectedId={selectedCompanyId}
+            />
             {loading ? (
               <Card>
                 <CardContent className="p-6">
@@ -98,7 +116,7 @@ const Customers = () => {
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  No customers found in your company.
+                  {selectedCompanyId ? "No customers found in selected company." : "Please select a company to view customers."}
                 </CardContent>
               </Card>
             ) : (
