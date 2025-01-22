@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TicketDetails from "./TicketDetails";
 
 const TicketList = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,7 @@ const TicketList = () => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
 
   useEffect(() => {
@@ -126,10 +128,7 @@ const TicketList = () => {
   });
 
   const handleTicketClick = (ticket: Ticket) => {
-    toast({
-      title: `Ticket #${ticket.id}`,
-      description: `Viewing ticket: ${ticket.title}`,
-    });
+    setSelectedTicket(ticket);
   };
 
   const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
@@ -201,6 +200,15 @@ const TicketList = () => {
           Loading tickets...
         </div>
       </div>
+    );
+  }
+
+  if (selectedTicket) {
+    return (
+      <TicketDetails
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+      />
     );
   }
 
