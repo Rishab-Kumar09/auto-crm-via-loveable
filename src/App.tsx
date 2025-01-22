@@ -7,6 +7,9 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
+import Customers from "./pages/Customers";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import React, { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -68,6 +71,36 @@ const App = () => {
                 element={
                   session ? (
                     <Tickets />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/customers"
+                element={
+                  session ? (
+                    <Customers />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  session ? (
+                    <Reports />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  session ? (
+                    <Settings />
                   ) : (
                     <Navigate to="/auth" replace />
                   )

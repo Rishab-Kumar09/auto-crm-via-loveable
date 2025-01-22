@@ -16,6 +16,7 @@ const getMenuItems = (role: UserRole) => {
     return [
       ...baseItems,
       { icon: HelpCircle, label: "Help Center", href: "/help" },
+      { icon: Settings, label: "Settings", href: "/settings" },
     ];
   }
 
@@ -24,6 +25,7 @@ const getMenuItems = (role: UserRole) => {
       ...baseItems,
       { icon: Users, label: "Customers", href: "/customers" },
       { icon: HelpCircle, label: "Help Center", href: "/help" },
+      { icon: Settings, label: "Settings", href: "/settings" },
     ];
   }
 
@@ -85,7 +87,7 @@ const Sidebar = () => {
   }, [toast]);
 
   const handleNavigation = (item: { label: string; href: string }) => {
-    if (item.href === "/dashboard" || item.href === "/tickets") {
+    if (["/dashboard", "/tickets", "/customers", "/reports", "/settings"].includes(item.href)) {
       navigate(item.href);
     } else {
       toast({
