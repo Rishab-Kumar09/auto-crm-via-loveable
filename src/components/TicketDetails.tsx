@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, MessageSquare, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment } from "@/types/ticket";
+import { Ticket, TicketComment, UserRole } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TicketDetailsProps {
@@ -49,7 +49,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           id: comment.user.id,
           name: comment.user.full_name,
           email: comment.user.email,
-          role: comment.user.role,
+          role: comment.user.role as UserRole,
         },
         created_at: new Date(comment.created_at).toLocaleString(),
       }));
@@ -106,7 +106,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           id: commentData.user.id,
           name: commentData.user.full_name,
           email: commentData.user.email,
-          role: commentData.user.role,
+          role: commentData.user.role as UserRole,
         },
         created_at: new Date(commentData.created_at).toLocaleString(),
       };
