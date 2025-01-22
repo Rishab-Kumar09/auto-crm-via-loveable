@@ -6,6 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 
+const CHART_COLORS = {
+  status: "#4f46e5", // Indigo for status chart
+  priority: "#22c55e" // Green for priority chart
+};
+
 const Reports = () => {
   const [ticketStats, setTicketStats] = useState<any>({
     byStatus: [],
@@ -81,13 +86,18 @@ const Reports = () => {
                   <CardTitle>Tickets by Status</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
-                  <ChartContainer className="w-full h-full">
+                  <ChartContainer 
+                    className="w-full h-full"
+                    config={{
+                      value: { theme: { light: CHART_COLORS.status, dark: CHART_COLORS.status } }
+                    }}
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={ticketStats.byStatus}>
                         <XAxis dataKey="name" />
                         <YAxis allowDecimals={false} />
                         <ChartTooltip />
-                        <Bar dataKey="value" fill="#4f46e5" />
+                        <Bar dataKey="value" fill={CHART_COLORS.status} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -99,13 +109,18 @@ const Reports = () => {
                   <CardTitle>Tickets by Priority</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
-                  <ChartContainer className="w-full h-full">
+                  <ChartContainer 
+                    className="w-full h-full"
+                    config={{
+                      value: { theme: { light: CHART_COLORS.priority, dark: CHART_COLORS.priority } }
+                    }}
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={ticketStats.byPriority}>
                         <XAxis dataKey="name" />
                         <YAxis allowDecimals={false} />
                         <ChartTooltip />
-                        <Bar dataKey="value" fill="#22c55e" />
+                        <Bar dataKey="value" fill={CHART_COLORS.priority} />
                       </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
