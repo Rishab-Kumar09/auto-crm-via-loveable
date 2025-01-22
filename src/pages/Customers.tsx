@@ -24,69 +24,46 @@ const Customers = () => {
           .single();
 
         if (profileError) throw profileError;
+        if (!userProfile?.company_id) throw new Error('No company associated with user');
 
-        // For admins, fetch all customers
-        if (userProfile?.role === 'admin') {
-          const { data: allCustomers, error: customersError } = await supabase
-            .from('profiles')
-            .select(`
-              *,
-              companies (
-                name
-              ),
-              tickets!customer_id (
-                id,
-                company_id
-              )
-            `)
-            .eq('role', 'customer');
+        // Get customers directly associated with company
+        const { data: companyCustomers, error: companyError } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            companies (
+              name
+            )
+          `)
+          .eq('role', 'customer')
+          .eq('company_id', userProfile.company_id);
 
-          if (customersError) throw customersError;
-          setCustomers(allCustomers || []);
-        } else {
-          // For non-admins, fetch only company-related customers
-          if (!userProfile?.company_id) throw new Error('No company associated with user');
+        if (companyError) throw companyError;
 
-          const [companyCustomers, ticketCustomers] = await Promise.all([
-            // Get customers directly associated with company
-            supabase
-              .from('profiles')
-              .select(`
-                *,
-                companies (
-                  name
-                )
-              `)
-              .eq('role', 'customer')
-              .eq('company_id', userProfile.company_id),
+        // Get customers who have tickets with the company
+        const { data: ticketCustomers, error: ticketError } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            companies (
+              name
+            ),
+            tickets!customer_id (
+              id,
+              company_id
+            )
+          `)
+          .eq('role', 'customer')
+          .eq('tickets.company_id', userProfile.company_id);
 
-            // Get customers who have tickets with the company
-            supabase
-              .from('profiles')
-              .select(`
-                *,
-                companies (
-                  name
-                ),
-                tickets!customer_id (
-                  id,
-                  company_id
-                )
-              `)
-              .eq('role', 'customer')
-              .eq('tickets.company_id', userProfile.company_id)
-          ]);
+        if (ticketError) throw ticketError;
 
-          if (companyCustomers.error) throw companyCustomers.error;
-          if (ticketCustomers.error) throw ticketCustomers.error;
+        // Combine and deduplicate results
+        const allCustomers = [...(companyCustomers || []), ...(ticketCustomers || [])];
+        const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
 
-          // Combine and deduplicate results
-          const allCustomers = [...(companyCustomers.data || []), ...(ticketCustomers.data || [])];
-          const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
-          setCustomers(uniqueCustomers);
-        }
-
-        console.log('Fetched customers:', customers);
+        console.log('Fetched customers:', uniqueCustomers);
+        setCustomers(uniqueCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
@@ -121,7 +98,7 @@ const Customers = () => {
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  No customers found.
+                  No customers found in your company.
                 </CardContent>
               </Card>
             ) : (
