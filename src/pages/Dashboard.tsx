@@ -11,7 +11,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 const STATUS_COLORS = {
   open: "#ea384c",      // Red for Open
   in_progress: "#FFD700", // Darker Yellow for In Progress
-  closed: "#22c55e"     // Lighter Green for Closed (using Tailwind's green-500)
+  closed: "#22c55e"     // Green-500 for Closed
 };
 
 const Dashboard = () => {
@@ -194,50 +194,25 @@ const Dashboard = () => {
             <CardContent className="h-[300px]">
               <ChartContainer
                 config={{
-                  bar1: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
-                  bar2: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
-                  bar3: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
+                  open: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
+                  in_progress: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
+                  closed: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={[
-                    { name: 'Open', value: stats.openTickets },
-                    { name: 'In Progress', value: stats.inProgressTickets },
-                    { name: 'Closed', value: stats.closedTickets },
+                    { name: 'Open', value: stats.openTickets, status: 'open' },
+                    { name: 'In Progress', value: stats.inProgressTickets, status: 'in_progress' },
+                    { name: 'Closed', value: stats.closedTickets, status: 'closed' },
                   ]}>
                     <XAxis dataKey="name" />
                     <YAxis allowDecimals={false} />
-                    <ChartTooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload) return null;
-                        const value = payload[0]?.value;
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Status
-                                </span>
-                                <span className="font-bold text-muted-foreground">
-                                  {payload[0].payload.name}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  Count
-                                </span>
-                                <span className="font-bold">
-                                  {typeof value === 'number' ? value : 0}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
+                    <ChartTooltip />
                     <Bar
                       dataKey="value"
+                      fill="var(--color-open)"
                       radius={[4, 4, 0, 0]}
+                      fillKey="status"
                     />
                   </BarChart>
                 </ResponsiveContainer>
