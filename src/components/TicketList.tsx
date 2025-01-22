@@ -29,6 +29,7 @@ const TicketList = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
 
+  // Fetch tickets function
   const fetchTickets = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -66,6 +67,7 @@ const TicketList = () => {
           )
         `);
 
+      // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
         query.eq('assignee_id', user.id);
       }
@@ -140,6 +142,7 @@ const TicketList = () => {
     fetchUserRole();
   }, []);
 
+  // Set up real-time subscription
   useEffect(() => {
     const channel = supabase
       .channel('tickets-changes')
@@ -156,7 +159,7 @@ const TicketList = () => {
             title: "Ticket Updated",
             description: "The ticket list has been refreshed.",
           });
-          fetchTickets();
+          fetchTickets(); // Refresh the entire list when any change occurs
         }
       )
       .subscribe();
@@ -186,31 +189,31 @@ const TicketList = () => {
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
       case "open":
-        return "bg-red-500 text-white";
+        return "bg-red-100 text-red-800";
       case "in_progress":
-        return "bg-[#F97316] text-white";
+        return "bg-yellow-100 text-yellow-800";
       case "closed":
-        return "bg-green-500 text-white";
+        return "bg-green-100 text-green-800";
       default:
-        return "bg-gray-500 text-white";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityColor = (priority: TicketPriority) => {
     switch (priority) {
       case "high":
-        return "bg-red-500 text-white";
+        return "bg-red-100 text-red-800";
       case "medium":
-        return "bg-[#D946EF] text-white";
+        return "bg-yellow-100 text-yellow-800";
       case "low":
-        return "bg-green-500 text-white";
+        return "bg-green-100 text-green-800";
       default:
-        return "bg-gray-500 text-white";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent ticket details from opening
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not found");
@@ -227,6 +230,7 @@ const TicketList = () => {
         description: "Ticket assigned successfully",
       });
 
+      // Refresh tickets list
       fetchTickets();
     } catch (error: any) {
       toast({
@@ -331,11 +335,17 @@ const TicketList = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Badge className={cn(getStatusColor(ticket.status))}>
+                  <Badge
+                    variant="secondary"
+                    className={cn("text-xs", getStatusColor(ticket.status))}
+                  >
                     {ticket.status.replace('_', ' ')}
                   </Badge>
                   {userRole !== 'customer' && (
-                    <Badge className={cn(getPriorityColor(ticket.priority))}>
+                    <Badge
+                      variant="secondary"
+                      className={cn("text-xs", getPriorityColor(ticket.priority))}
+                    >
                       {ticket.priority}
                     </Badge>
                   )}
