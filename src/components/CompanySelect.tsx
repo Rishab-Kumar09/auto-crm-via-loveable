@@ -1,6 +1,5 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface CompanySelectProps {
   onSelect: (companyId: string | null) => void;
-  selectedId?: string | null;
+  selectedId: string | null;
 }
 
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
@@ -30,23 +29,18 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
     },
   });
 
-  const selectedCompany = companies.find(
-    (company) => company.id === selectedId
-  );
-
   return (
     <Select
       value={selectedId || ""}
-      onValueChange={(value) => onSelect(value || null)}
+      onValueChange={(value) => onSelect(value)}
       disabled={isLoading}
     >
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Select company">
-          {isLoading ? (
-            "Loading companies..."
-          ) : (
-            selectedCompany?.name || "Select company"
-          )}
+          {isLoading
+            ? "Loading companies..."
+            : companies.find((company) => company.id === selectedId)?.name || "Select company"
+          }
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
