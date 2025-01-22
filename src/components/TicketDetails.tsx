@@ -187,21 +187,23 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .update(updates)
         .eq('id', ticket.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating ticket:", error);
+        throw error;
+      }
+
+      // Update the local ticket state to reflect changes
+      Object.assign(ticket, updates);
 
       toast({
         title: "Success",
         description: "Ticket updated successfully.",
       });
-
-      // Don't close the ticket details view after status update
-      // This allows users to see the updated status and make additional changes if needed
-      // onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating ticket:", error);
       toast({
         title: "Error",
-        description: "Failed to update ticket. Please try again.",
+        description: error.message || "Failed to update ticket. Please try again.",
         variant: "destructive",
       });
     }
