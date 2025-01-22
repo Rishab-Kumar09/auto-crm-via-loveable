@@ -341,12 +341,14 @@ const TicketList = () => {
                   >
                     {ticket.status.replace('_', ' ')}
                   </Badge>
-                  <Badge
-                    variant="secondary"
-                    className={cn("text-xs", getPriorityColor(ticket.priority))}
-                  >
-                    {ticket.priority}
-                  </Badge>
+                  {userRole !== 'customer' && (
+                    <Badge
+                      variant="secondary"
+                      className={cn("text-xs", getPriorityColor(ticket.priority))}
+                    >
+                      {ticket.priority}
+                    </Badge>
+                  )}
                   {!ticket.assignedTo && userRole === 'admin' && (
                     <Button
                       variant="outline"
