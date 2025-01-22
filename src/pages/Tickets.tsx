@@ -40,13 +40,13 @@ const Tickets = () => {
             <h1 className="text-2xl font-bold text-zendesk-secondary">
               {userRole === 'agent' ? 'My Assigned Tickets' : 'Support Tickets'}
             </h1>
-            {userRole !== 'agent' && (
+            {userRole === 'customer' && (
               <Button onClick={() => setShowForm(!showForm)}>
                 {showForm ? "View Tickets" : "Create Ticket"}
               </Button>
             )}
           </div>
-          {showForm && userRole !== 'agent' ? <TicketForm /> : <TicketList />}
+          {showForm && userRole === 'customer' ? <TicketForm /> : <TicketList />}
         </main>
       </div>
     </div>
