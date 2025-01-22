@@ -209,10 +209,11 @@ const Dashboard = () => {
                       { name: 'Closed', value: Math.round(stats.closedTickets) },
                     ]}>
                       <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} /> {/* Force whole numbers on Y axis */}
+                      <YAxis allowDecimals={false} />
                       <ChartTooltip
                         content={({ active, payload }) => {
                           if (!active || !payload) return null;
+                          const value = payload[0]?.value;
                           return (
                             <div className="rounded-lg border bg-background p-2 shadow-sm">
                               <div className="grid grid-cols-2 gap-2">
@@ -229,7 +230,7 @@ const Dashboard = () => {
                                     Count
                                   </span>
                                   <span className="font-bold">
-                                    {Math.round(payload[0].value)}
+                                    {typeof value === 'number' ? Math.round(value) : 0}
                                   </span>
                                 </div>
                               </div>
@@ -286,6 +287,7 @@ const Dashboard = () => {
                     <ChartTooltip
                       content={({ active, payload }) => {
                         if (!active || !payload) return null;
+                        const value = payload[0]?.value;
                         return (
                           <div className="rounded-lg border bg-background p-2 shadow-sm">
                             <div className="grid grid-cols-2 gap-2">
@@ -302,7 +304,7 @@ const Dashboard = () => {
                                   Count
                                 </span>
                                 <span className="font-bold">
-                                  {Math.round(payload[0].value)}
+                                  {typeof value === 'number' ? Math.round(value) : 0}
                                 </span>
                               </div>
                             </div>
