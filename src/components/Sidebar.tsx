@@ -87,7 +87,7 @@ const Sidebar = () => {
   }, [toast]);
 
   const handleNavigation = (item: { label: string; href: string }) => {
-    if (["/dashboard", "/tickets", "/customers", "/reports", "/settings"].includes(item.href)) {
+    if (["/dashboard", "/tickets", "/customers", "/agents", "/settings"].includes(item.href)) {
       navigate(item.href);
     } else {
       toast({
