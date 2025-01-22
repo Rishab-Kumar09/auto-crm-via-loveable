@@ -1,135 +1,81 @@
-import { Home, Inbox, Users, Settings, HelpCircle, PlusCircle } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { UserRole } from "@/types/ticket";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, useLocation } from "react-router-dom";
-
-const getMenuItems = (role: UserRole) => {
-  const baseItems = [
-    { icon: Home, label: "Dashboard", href: "/dashboard" },
-    { icon: Inbox, label: "Tickets", href: "/tickets" },
-  ];
-
-  if (role === "customer") {
-    return [
-      ...baseItems,
-      { icon: HelpCircle, label: "Help Center", href: "/help" },
-      { icon: Settings, label: "Settings", href: "/settings" },
-    ];
-  }
-
-  if (role === "agent") {
-    return [
-      ...baseItems,
-      { icon: Users, label: "Customers", href: "/customers" },
-      { icon: HelpCircle, label: "Help Center", href: "/help" },
-      { icon: Settings, label: "Settings", href: "/settings" },
-    ];
-  }
-
-  // Admin role
-  return [
-    ...baseItems,
-    { icon: Users, label: "Customers", href: "/customers" },
-    { icon: Settings, label: "Settings", href: "/settings" },
-  ];
-};
+import {
+  LayoutDashboard,
+  TicketIcon,
+  Users,
+  UserCog,
+  Settings,
+  BookOpen,
+  MessageSquare,
+} from "lucide-react";
 
 const Sidebar = () => {
-  const { toast } = useToast();
-  const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const location = useLocation();
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
         
-        if (user) {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error fetching user role:', error);
-            toast({
-              title: "Error",
-              description: "Could not fetch user role",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          if (profile) {
-            setUserRole(profile.role as UserRole);
-          }
+        if (profile) {
+          setUserRole(profile.role);
         }
-      } catch (error) {
-        console.error('Error:', error);
-        toast({
-          title: "Error",
-          description: "Could not fetch user role",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchUserRole();
-  }, [toast]);
+  }, []);
 
-  const handleNavigation = (item: { label: string; href: string }) => {
-    if (["/dashboard", "/tickets", "/customers", "/reports", "/settings"].includes(item.href)) {
-      navigate(item.href);
-    } else {
-      toast({
-        title: "Navigation",
-        description: `${item.label} page is not implemented yet.`,
-      });
-    }
-  };
-
-  const menuItems = getMenuItems(userRole);
-
-  if (loading) {
-    return (
-      <div className="h-screen w-64 bg-white border-r border-zendesk-border flex items-center justify-center">
-        <p className="text-zendesk-muted">Loading...</p>
-      </div>
-    );
-  }
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Tickets", href: "/tickets", icon: TicketIcon },
+    ...(userRole === 'admin' ? [
+      { name: "Customers", href: "/customers", icon: Users },
+      { name: "Agents", href: "/agents", icon: UserCog }
+    ] : []),
+    { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen },
+    { name: "Chat", href: "/chat", icon: MessageSquare },
+    { name: "Settings", href: "/settings", icon: Settings },
+  ];
 
   return (
-    <div className="h-screen w-64 bg-white border-r border-zendesk-border flex flex-col">
-      <div className="p-4 border-b border-zendesk-border">
-        <h1 className="text-xl font-bold text-zendesk-secondary">Help Desk</h1>
-        <p className="text-sm text-zendesk-muted mt-1 capitalize">{userRole} Portal</p>
+    <div className="flex h-full w-56 flex-col bg-white border-r border-gray-200">
+      <div className="flex h-14 items-center border-b border-gray-200 px-4">
+        <Link to="/" className="flex items-center space-x-2">
+          <img src="/favicon.ico" alt="Logo" className="h-6 w-6" />
+          <span className="font-semibold text-lg">Helpdesk</span>
+        </Link>
       </div>
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => (
-            <li key={item.label}>
-              <button
-                onClick={() => handleNavigation(item)}
+      <nav className="flex-1 space-y-1 px-2 py-4">
+        {navigation.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.name} to={item.href}>
+              <Button
+                variant="ghost"
                 className={cn(
-                  "flex items-center space-x-3 px-4 py-2 rounded-md text-zendesk-secondary w-full text-left",
-                  "hover:bg-zendesk-background transition-colors duration-200",
-                  location.pathname === item.href && "bg-zendesk-background"
+                  "w-full justify-start",
+                  location.pathname === item.href
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+                <Icon className="mr-3 h-5 w-5" />
+                {item.name}
+              </Button>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

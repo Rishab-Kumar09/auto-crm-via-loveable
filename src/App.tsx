@@ -1,116 +1,29 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Tickets from "./pages/Tickets";
-import Customers from "./pages/Customers";
-import Settings from "./pages/Settings";
-import React, { useEffect, useState } from "react";
-import { supabase } from "./integrations/supabase/client";
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import Tickets from "@/pages/Tickets";
+import Customers from "@/pages/Customers";
+import Agents from "@/pages/Agents";
+import Settings from "@/pages/Settings";
+import "./App.css";
 
-const queryClient = new QueryClient();
-
-const App = () => {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
+function App() {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  session ? (
-                    <Navigate to="/dashboard" replace />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  session ? (
-                    <Dashboard />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/tickets"
-                element={
-                  session ? (
-                    <Tickets />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/customers"
-                element={
-                  session ? (
-                    <Customers />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  session ? (
-                    <Settings />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/auth"
-                element={
-                  !session ? (
-                    <Auth />
-                  ) : (
-                    <Navigate to="/dashboard" replace />
-                  )
-                }
-              />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/tickets" element={<Tickets />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/agents" element={<Agents />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+      <Toaster />
+    </Router>
   );
-};
+}
 
 export default App;
