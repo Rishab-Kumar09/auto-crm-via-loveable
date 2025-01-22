@@ -175,9 +175,18 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
+      // Convert the Ticket update to database fields
+      const dbUpdates: any = { ...updates };
+      
+      // Handle special case for assignedTo -> assignee_id
+      if (updates.assignedTo) {
+        dbUpdates.assignee_id = updates.assignedTo.id;
+        delete dbUpdates.assignedTo;
+      }
+
       const { error } = await supabase
         .from('tickets')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', ticket.id);
 
       if (error) throw error;
@@ -265,7 +274,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
               <label className="block text-sm font-medium mb-1">Assign Agent</label>
               <Select
                 value={ticket.assignedTo?.id || ""}
-                onValueChange={(value) => handleUpdateTicket({ assignee_id: value })}
+                onValueChange={(value) => {
+                  const selectedAgent = agents.find(agent => agent.id === value);
+                  if (selectedAgent) {
+                    handleUpdateTicket({
+                      assignedTo: {
+                        id: selectedAgent.id,
+                        name: selectedAgent.name,
+                        email: '',
+                        role: 'agent'
+                      }
+                    });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <UserPlus className="w-4 h-4 mr-2" />
