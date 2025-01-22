@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserRole } from "@/types/ticket";
 import { BarChart as BarChartIcon, PieChart as PieChartIcon, TicketIcon, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -25,12 +25,14 @@ const Dashboard = () => {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, company_id')
           .eq('id', user.id)
           .single();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
+          // Fetch stats after getting user role
+          fetchStats(profile.role as UserRole, user.id, profile.company_id);
         }
       }
     };
@@ -38,32 +40,32 @@ const Dashboard = () => {
     fetchUserRole();
   }, []);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const fetchStats = async (role: UserRole, userId: string, companyId: string | null) => {
+    try {
+      let baseQuery = supabase.from('tickets').select('*', { count: 'exact' });
 
-      let query = supabase
-        .from('tickets')
-        .select('*', { count: 'exact' });
-
-      if (userRole === 'customer') {
-        query = query.eq('customer_id', user.id);
-      } else if (userRole === 'agent') {
-        query = query.eq('assignee_id', user.id);
+      // Apply filters based on user role
+      switch (role) {
+        case 'customer':
+          baseQuery = baseQuery.eq('customer_id', userId);
+          break;
+        case 'agent':
+          baseQuery = baseQuery.eq('assignee_id', userId);
+          break;
+        case 'admin':
+          if (companyId) {
+            baseQuery = baseQuery.eq('company_id', companyId);
+          }
+          break;
       }
 
-      const [
-        { count: total },
-        { count: open },
-        { count: inProgress },
-        { count: closed }
-      ] = await Promise.all([
-        query,
-        query.eq('status', 'open'),
-        query.eq('status', 'in_progress'),
-        query.eq('status', 'closed')
-      ]);
+      // Get total count
+      const { count: total } = await baseQuery;
+
+      // Get counts by status
+      const { count: open } = await baseQuery.eq('status', 'open');
+      const { count: inProgress } = await baseQuery.eq('status', 'in_progress');
+      const { count: closed } = await baseQuery.eq('status', 'closed');
 
       setStats({
         totalTickets: total || 0,
@@ -71,11 +73,24 @@ const Dashboard = () => {
         inProgressTickets: inProgress || 0,
         closedTickets: closed || 0,
       });
-    };
 
-    fetchStats();
+      console.log('Stats updated:', {
+        total,
+        open,
+        inProgress,
+        closed,
+        role,
+        userId,
+        companyId
+      });
 
-    // Subscribe to real-time updates
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  // Set up real-time subscription for ticket changes
+  useEffect(() => {
     const channel = supabase
       .channel('tickets-changes')
       .on(
@@ -85,9 +100,20 @@ const Dashboard = () => {
           schema: 'public',
           table: 'tickets'
         },
-        () => {
-          // Refetch stats when tickets change
-          fetchStats();
+        async (payload) => {
+          console.log('Ticket change detected:', payload);
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role, company_id')
+              .eq('id', user.id)
+              .single();
+            
+            if (profile) {
+              fetchStats(profile.role as UserRole, user.id, profile.company_id);
+            }
+          }
         }
       )
       .subscribe();
@@ -95,7 +121,7 @@ const Dashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userRole]);
+  }, []);
 
   const pieChartData = [
     { name: 'Open', value: stats.openTickets },
