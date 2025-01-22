@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Flag, UserPlus, CheckSquare, RefreshCw, Building } from "lucide-react";
+import { Clock, MessageSquare, User, Flag, RefreshCw, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AgentAssignmentSelect from "./AgentAssignmentSelect";
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -26,7 +27,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [assignedAgents, setAssignedAgents] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -44,29 +45,35 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       }
     };
 
-    const fetchAgents = async () => {
-      const { data: agentsData } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('role', 'agent');
-      
-      if (agentsData) {
-        setAgents(agentsData.map(agent => ({
-          id: agent.id,
-          name: agent.full_name || 'Unknown Agent'
-        })));
-      }
-    };
-
     fetchUserRole();
-    if (userRole === 'admin') {
-      fetchAgents();
-    }
-  }, [userRole]);
+  }, []);
 
   useEffect(() => {
     fetchComments();
+    fetchAssignedAgents();
   }, [ticket.id]);
+
+  const fetchAssignedAgents = async () => {
+    const { data: assignments } = await supabase
+      .from('ticket_assignments')
+      .select(`
+        agent_id,
+        agent:profiles!ticket_assignments_agent_id_fkey (
+          id,
+          full_name
+        )
+      `)
+      .eq('ticket_id', ticket.id);
+
+    if (assignments) {
+      setAssignedAgents(
+        assignments.map(assignment => ({
+          id: assignment.agent.id,
+          name: assignment.agent.full_name || 'Unknown Agent'
+        }))
+      );
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -175,16 +182,9 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      const dbUpdates: any = { ...updates };
-      
-      if (updates.assignedTo) {
-        dbUpdates.assignee_id = updates.assignedTo.id;
-        delete dbUpdates.assignedTo;
-      }
-
       const { error } = await supabase
         .from('tickets')
-        .update(dbUpdates)
+        .update(updates)
         .eq('id', ticket.id);
 
       if (error) throw error;
@@ -264,24 +264,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
         <div className="grid grid-cols-2 gap-4">
           {userRole === 'admin' && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Assign Agent</label>
-              <Select
-                value={ticket.assignedTo?.id || ""}
-                onValueChange={(value) => handleUpdateTicket({ assignedTo: { id: value } })}
-              >
-                <SelectTrigger>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Select agent" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agents.map((agent) => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-1">Assigned Agents</label>
+              <AgentAssignmentSelect
+                ticketId={ticket.id}
+                currentAssignments={assignedAgents}
+                onAssignmentChange={fetchAssignedAgents}
+              />
             </div>
           )}
 
@@ -302,19 +291,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          )}
-
-          {userRole === 'customer' && ticket.status !== 'closed' && (
-            <div className="col-span-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleCloseTicket}
-              >
-                <CheckSquare className="w-4 h-4 mr-2" />
-                Close Ticket
-              </Button>
             </div>
           )}
         </div>
