@@ -14,6 +14,8 @@ const STATUS_COLORS = {
   closed: "#22c55e"     // Green-500 for Closed
 };
 
+// ... keep existing code (state and useEffect hooks)
+
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [stats, setStats] = useState({
@@ -210,10 +212,9 @@ const Dashboard = () => {
                     <ChartTooltip />
                     <Bar
                       dataKey="value"
-                      fill={`var(--color-${STATUS_COLORS.open})`}
                       radius={[4, 4, 0, 0]}
-                      getStroke={(data) => `var(--color-${data.status})`}
-                      getFill={(data) => `var(--color-${data.status})`}
+                      fill={STATUS_COLORS.open}
+                      stroke={STATUS_COLORS.open}
                     />
                   </BarChart>
                 </ResponsiveContainer>
