@@ -13,6 +13,20 @@ const Customers = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
+        // First get the admin's company_id
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const { data: adminProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (!adminProfile?.company_id) throw new Error('No company associated with admin');
+
+        // Then fetch customers from that company
         const { data: profiles, error } = await supabase
           .from('profiles')
           .select(`
@@ -21,7 +35,8 @@ const Customers = () => {
               name
             )
           `)
-          .eq('role', 'customer');
+          .eq('role', 'customer')
+          .eq('company_id', adminProfile.company_id);
 
         if (error) throw error;
         setCustomers(profiles || []);
@@ -47,7 +62,7 @@ const Customers = () => {
         <Header />
         <main className="flex-1 p-6 overflow-auto">
           <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
-            Customers
+            Company Customers
           </h1>
           <div className="grid gap-4">
             {loading ? (
@@ -59,7 +74,7 @@ const Customers = () => {
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  No customers found.
+                  No customers found in your company.
                 </CardContent>
               </Card>
             ) : (
