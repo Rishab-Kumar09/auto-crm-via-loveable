@@ -24,7 +24,7 @@ interface CompanySelectProps {
 
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
+  const [search, setSearch] = useState("");
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
@@ -41,6 +41,10 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
 
   const selectedCompany = companies.find(
     (company) => company.id === selectedId
+  );
+
+  const filteredCompanies = companies.filter((company) =>
+    company.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -64,17 +68,21 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
-        <Command value={value} onValueChange={setValue}>
-          <CommandInput placeholder="Search company..." />
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Search company..." 
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandEmpty>No company found.</CommandEmpty>
           <CommandGroup>
-            {!isLoading && companies.map((company) => (
+            {!isLoading && filteredCompanies.map((company) => (
               <CommandItem
                 key={company.id}
-                value={company.name}
                 onSelect={() => {
                   onSelect(company.id);
                   setOpen(false);
+                  setSearch("");
                 }}
               >
                 <Check
