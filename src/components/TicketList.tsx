@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Ticket, TicketStatus, TicketPriority, UserRole } from "@/types/ticket";
 import { useState, useEffect } from "react";
-import { MessageSquare, User, Filter, Clock, Building, Flag } from "lucide-react";
+import { MessageSquare, User, Filter, Clock, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -212,35 +212,6 @@ const TicketList = () => {
     }
   };
 
-  const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
-    e.stopPropagation(); // Prevent ticket details from opening
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
-
-      const { error } = await supabase
-        .from("tickets")
-        .update({ assignee_id: user.id })
-        .eq("id", ticket.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Ticket assigned successfully",
-      });
-
-      // Refresh tickets list
-      fetchTickets();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8">
@@ -294,7 +265,7 @@ const TicketList = () => {
             onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
           >
             <SelectTrigger className="w-[180px]">
-              <Flag className="w-4 h-4 mr-2" />
+              <User className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Filter by priority" />
             </SelectTrigger>
             <SelectContent>
@@ -349,14 +320,10 @@ const TicketList = () => {
                       {ticket.priority}
                     </Badge>
                   )}
-                  {!ticket.assignedTo && userRole === 'admin' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => handleAssignTicket(e, ticket)}
-                    >
-                      Assign to me
-                    </Button>
+                  {ticket.assignedTo && (
+                    <Badge variant="outline" className="text-xs">
+                      Assigned to: {ticket.assignedTo.name}
+                    </Badge>
                   )}
                 </div>
               </div>

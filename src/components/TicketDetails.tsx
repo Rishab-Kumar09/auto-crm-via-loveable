@@ -264,57 +264,25 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
         <div className="grid grid-cols-2 gap-4">
           {userRole === 'admin' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-1">Priority</label>
-                <Select
-                  value={ticket.priority}
-                  onValueChange={(value) => handleUpdateTicket({ priority: value as TicketPriority })}
-                >
-                  <SelectTrigger>
-                    <Flag className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Set priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Assign Agent</label>
-                <Select
-                  value={ticket.assignedTo?.id || ""}
-                  onValueChange={(value) => {
-                    const selectedAgent = agents.find(agent => agent.id === value);
-                    if (selectedAgent) {
-                      handleUpdateTicket({
-                        assignedTo: {
-                          id: selectedAgent.id,
-                          name: selectedAgent.name,
-                          email: '',
-                          role: 'agent'
-                        }
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Assign agent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
+            <div>
+              <label className="block text-sm font-medium mb-1">Assign Agent</label>
+              <Select
+                value={ticket.assignedTo?.id || ""}
+                onValueChange={(value) => handleUpdateTicket({ assignedTo: { id: value } })}
+              >
+                <SelectTrigger>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Select agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
 
           {canManageTicketStatus && (
@@ -343,19 +311,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                 variant="outline"
                 className="w-full"
                 onClick={handleCloseTicket}
-              >
-                <CheckSquare className="w-4 h-4 mr-2" />
-                Close Ticket
-              </Button>
-            </div>
-          )}
-
-          {canManageTicketStatus && (
-            <div className="col-span-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => handleUpdateTicket({ status: 'closed' })}
               >
                 <CheckSquare className="w-4 h-4 mr-2" />
                 Close Ticket
