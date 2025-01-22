@@ -76,7 +76,7 @@ const Dashboard = () => {
     totalTickets: ticketMetrics?.total_tickets || 0,
     openTickets: ticketMetrics?.open_tickets || 0,
     inProgressTickets: ticketMetrics?.in_progress_tickets || 0,
-    averageResponseTime: "24 hours", // This could be calculated from actual data
+    closedTickets: ticketMetrics?.resolved_tickets || 0,
   };
 
   const chartData = {
