@@ -268,7 +268,7 @@ const TicketList = () => {
            userRole === 'agent' ? "My Assigned Tickets" : "All Tickets"}
         </h2>
         <div className="flex items-center gap-4">
-          {userRole !== 'agent' && (
+          {userRole === 'admin' && (
             <CompanySelect
               selectedId={companyFilter}
               onSelect={setCompanyFilter}
@@ -287,6 +287,21 @@ const TicketList = () => {
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={priorityFilter}
+            onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Flag className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filter by priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
         </div>
