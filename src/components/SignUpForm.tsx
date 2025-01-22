@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types/ticket";
+import CompanySelect from "./CompanySelect";
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -22,6 +23,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>("customer");
   const [companyName, setCompanyName] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -44,6 +46,8 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
         }
         
         companyId = company.id;
+      } else if (role === "agent" && !selectedCompanyId) {
+        throw new Error("Please select a company");
       }
 
       // Then create the user
@@ -64,7 +68,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
         throw signUpError;
       }
 
-      // Create profile with selected role and company if admin
+      // Create profile with selected role and company if admin or agent
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([{ 
@@ -72,7 +76,7 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
           email,
           full_name: fullName,
           role,
-          ...(companyId && { company_id: companyId })
+          company_id: role === "admin" ? companyId : selectedCompanyId
         }]);
 
       if (profileError) {
@@ -121,6 +125,14 @@ const SignUpForm = ({ onSuccess, onError }: SignUpFormProps) => {
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="Company Name"
             required
+          />
+        </div>
+      )}
+      {role === "agent" && (
+        <div>
+          <CompanySelect
+            onSelect={setSelectedCompanyId}
+            selectedId={selectedCompanyId}
           />
         </div>
       )}
