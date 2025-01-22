@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 
 const STATUS_COLORS = {
   open: "#ea384c",
@@ -49,8 +49,14 @@ const TicketChart = ({ data }: TicketChartProps) => {
                 dataKey="value"
                 radius={[4, 4, 0, 0]}
                 fillOpacity={0.9}
-                fill={(entry) => STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
-              />
+              >
+                {chartData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`}
+                    fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
