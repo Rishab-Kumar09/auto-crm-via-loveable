@@ -193,9 +193,11 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle>Ticket Status Distribution</CardTitle>
             </CardHeader>
-            <CardContent className="h-[400px] p-4"> {/* Adjusted height and added padding */}
+            {/* Chart container with adjusted height and padding */}
+            <CardContent className="h-[400px] p-4">
+              {/* Chart container with size constraints */}
               <ChartContainer
-                className="w-full h-full max-h-[300px]" {/* Added size constraints */}
+                className="w-full h-full max-h-[300px]"
                 config={{
                   open: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
                   in_progress: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
@@ -209,7 +211,7 @@ const Dashboard = () => {
                       { name: 'In Progress', value: stats.inProgressTickets, status: 'in_progress' },
                       { name: 'Closed', value: stats.closedTickets, status: 'closed' },
                     ]}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }} {/* Added margins */}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                   >
                     <XAxis dataKey="name" />
                     <YAxis allowDecimals={false} />
