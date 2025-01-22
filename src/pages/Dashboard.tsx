@@ -193,8 +193,9 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle>Ticket Status Distribution</CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[400px] p-4"> {/* Adjusted height and added padding */}
               <ChartContainer
+                className="w-full h-full max-h-[300px]" {/* Added size constraints */}
                 config={{
                   open: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
                   in_progress: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
@@ -202,11 +203,14 @@ const Dashboard = () => {
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: 'Open', value: stats.openTickets, status: 'open' },
-                    { name: 'In Progress', value: stats.inProgressTickets, status: 'in_progress' },
-                    { name: 'Closed', value: stats.closedTickets, status: 'closed' },
-                  ]}>
+                  <BarChart 
+                    data={[
+                      { name: 'Open', value: stats.openTickets, status: 'open' },
+                      { name: 'In Progress', value: stats.inProgressTickets, status: 'in_progress' },
+                      { name: 'Closed', value: stats.closedTickets, status: 'closed' },
+                    ]}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }} {/* Added margins */}
+                  >
                     <XAxis dataKey="name" />
                     <YAxis allowDecimals={false} />
                     <ChartTooltip />
