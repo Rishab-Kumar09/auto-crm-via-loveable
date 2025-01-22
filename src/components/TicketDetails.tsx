@@ -25,6 +25,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const fetchComments = async () => {
     try {
+      console.log("Fetching comments for ticket:", ticket.id);
       const { data: commentsData, error } = await supabase
         .from("comments")
         .select(`
@@ -39,21 +40,35 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .eq("ticket_id", ticket.id)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
-      const formattedComments = commentsData.map((comment: any) => ({
-        id: comment.id,
-        ticketId: comment.ticket_id,
-        content: comment.content,
-        user: {
-          id: comment.user.id,
-          name: comment.user.full_name,
-          email: comment.user.email,
-          role: comment.user.role as UserRole,
-        },
-        created_at: new Date(comment.created_at).toLocaleString(),
-      }));
+      if (!commentsData) {
+        console.log("No comments data returned");
+        setComments([]);
+        return;
+      }
 
+      console.log("Raw comments data:", commentsData);
+
+      const formattedComments = commentsData
+        .filter(comment => comment.user != null) // Filter out comments with null user data
+        .map((comment: any) => ({
+          id: comment.id,
+          ticketId: comment.ticket_id,
+          content: comment.content,
+          user: {
+            id: comment.user.id,
+            name: comment.user.full_name || 'Unknown User',
+            email: comment.user.email || '',
+            role: comment.user.role as UserRole,
+          },
+          created_at: new Date(comment.created_at).toLocaleString(),
+        }));
+
+      console.log("Formatted comments:", formattedComments);
       setComments(formattedComments);
     } catch (error) {
       console.error("Error fetching comments:", error);
@@ -178,25 +193,31 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-4">
-              {comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="bg-gray-50 rounded-lg p-4 space-y-2"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{comment.user.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {comment.user.role}
-                      </Badge>
+              {loading ? (
+                <div className="text-center text-zendesk-muted">Loading comments...</div>
+              ) : comments.length > 0 ? (
+                comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="bg-gray-50 rounded-lg p-4 space-y-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{comment.user.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {comment.user.role}
+                        </Badge>
+                      </div>
+                      <span className="text-sm text-zendesk-muted">
+                        {comment.created_at}
+                      </span>
                     </div>
-                    <span className="text-sm text-zendesk-muted">
-                      {comment.created_at}
-                    </span>
+                    <p className="text-zendesk-muted">{comment.content}</p>
                   </div>
-                  <p className="text-zendesk-muted">{comment.content}</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center text-zendesk-muted">No comments yet</div>
+              )}
             </div>
           </ScrollArea>
 
