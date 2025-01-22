@@ -5,15 +5,43 @@ import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Ticket, TicketStatus, UserRole } from "@/types/ticket";
 import { useState, useEffect } from "react";
-import { MessageSquare, User } from "lucide-react";
+import { MessageSquare, User, Filter, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TicketList = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole>("customer");
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const searchQuery = searchParams.get("q")?.toLowerCase();
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setUserRole(profile.role as UserRole);
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, []);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -46,7 +74,6 @@ const TicketList = () => {
           return;
         }
 
-        // Transform the data to match our Ticket type
         const formattedTickets = ticketsData.map((ticket: any) => ({
           id: ticket.id,
           title: ticket.title,
@@ -87,13 +114,16 @@ const TicketList = () => {
     fetchTickets();
   }, [toast]);
 
-  const filteredTickets = searchQuery
-    ? tickets.filter(
-        (ticket) =>
-          ticket.title.toLowerCase().includes(searchQuery) ||
-          ticket.customer.name.toLowerCase().includes(searchQuery)
-      )
-    : tickets;
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch = searchQuery
+      ? ticket.title.toLowerCase().includes(searchQuery) ||
+        ticket.customer.name.toLowerCase().includes(searchQuery)
+      : true;
+
+    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleTicketClick = (ticket: Ticket) => {
     toast({
@@ -108,23 +138,6 @@ const TicketList = () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userData.user.id)
-        .single();
-      
-      if (profileError) throw profileError;
-
-      if (profileData.role === "customer") {
-        toast({
-          title: "Permission Denied",
-          description: "Only agents and admins can assign tickets.",
-          variant: "destructive",
-        });
-        return;
-      }
 
       const { error: updateError } = await supabase
         .from('tickets')
@@ -142,10 +155,10 @@ const TicketList = () => {
           ? {
               ...t,
               assignedTo: {
-                id: profileData.id,
-                name: profileData.full_name,
-                email: profileData.email,
-                role: profileData.role as UserRole,
+                id: userData.user.id,
+                name: userRole,
+                email: "",
+                role: userRole,
               },
               status: 'in_progress' as TicketStatus,
             }
@@ -193,10 +206,27 @@ const TicketList = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-4 border-b border-zendesk-border">
+      <div className="p-4 border-b border-zendesk-border flex justify-between items-center">
         <h2 className="text-lg font-semibold text-zendesk-secondary">
-          {searchQuery ? `Search Results (${filteredTickets.length})` : "Recent Tickets"}
+          {searchQuery ? `Search Results (${filteredTickets.length})` : "All Tickets"}
         </h2>
+        <div className="flex items-center gap-4">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as TicketStatus | "all")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="divide-y divide-zendesk-border">
         {filteredTickets.length > 0 ? (
@@ -209,9 +239,15 @@ const TicketList = () => {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="font-medium text-zendesk-secondary">{ticket.title}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-zendesk-muted">
-                    <User className="w-4 h-4" />
-                    <span>{ticket.customer.name}</span>
+                  <div className="flex items-center space-x-4 text-sm text-zendesk-muted">
+                    <div className="flex items-center space-x-1">
+                      <User className="w-4 h-4" />
+                      <span>{ticket.customer.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{ticket.created_at}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -219,9 +255,9 @@ const TicketList = () => {
                     variant="secondary"
                     className={cn("text-xs", getStatusColor(ticket.status))}
                   >
-                    {ticket.status}
+                    {ticket.status.replace('_', ' ')}
                   </Badge>
-                  {!ticket.assignedTo && (
+                  {!ticket.assignedTo && userRole === 'admin' && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -230,7 +266,6 @@ const TicketList = () => {
                       Assign to me
                     </Button>
                   )}
-                  <span className="text-sm text-zendesk-muted">{ticket.created_at}</span>
                 </div>
               </div>
             </div>
