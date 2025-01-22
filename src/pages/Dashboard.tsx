@@ -8,7 +8,14 @@ import { BarChart as BarChartIcon, PieChart as PieChartIcon, TicketIcon, Users }
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+// Define consistent colors for ticket statuses
+const STATUS_COLORS = {
+  open: "#FEC6A1",      // Soft Orange for Open
+  in_progress: "#F2FCE2", // Soft Green for In Progress
+  closed: "#D3E4FD"     // Soft Blue for Closed
+};
+
+const COLORS = [STATUS_COLORS.open, STATUS_COLORS.in_progress, STATUS_COLORS.closed];
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
@@ -31,7 +38,6 @@ const Dashboard = () => {
         
         if (profile) {
           setUserRole(profile.role as UserRole);
-          // Fetch stats after getting user role
           fetchStats(profile.role as UserRole, user.id, profile.company_id);
         }
       }
@@ -59,7 +65,6 @@ const Dashboard = () => {
           break;
       }
 
-      // Get all tickets and their statuses in a single query
       const { data: tickets, error } = await query;
       
       if (error) {
@@ -70,15 +75,15 @@ const Dashboard = () => {
       // Count tickets by status
       const counts = (tickets || []).reduce((acc, ticket) => {
         const status = ticket.status || 'open';
-        acc[status] = (acc[status] || 0) + 1;
+        acc[status] = Math.round((acc[status] || 0) + 1); // Ensure whole numbers
         return acc;
       }, {} as Record<string, number>);
 
       setStats({
-        totalTickets: tickets?.length || 0,
-        openTickets: counts['open'] || 0,
-        inProgressTickets: counts['in_progress'] || 0,
-        closedTickets: counts['closed'] || 0,
+        totalTickets: Math.round(tickets?.length || 0),
+        openTickets: Math.round(counts['open'] || 0),
+        inProgressTickets: Math.round(counts['in_progress'] || 0),
+        closedTickets: Math.round(counts['closed'] || 0),
       });
 
       console.log('Stats updated:', {
@@ -192,17 +197,19 @@ const Dashboard = () => {
               <CardContent className="h-[300px]">
                 <ChartContainer
                   config={{
-                    bar1: { theme: { light: "#0088FE", dark: "#0088FE" } },
+                    bar1: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
+                    bar2: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
+                    bar3: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
                   }}
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
-                      { name: 'Open', value: stats.openTickets },
-                      { name: 'In Progress', value: stats.inProgressTickets },
-                      { name: 'Closed', value: stats.closedTickets },
+                      { name: 'Open', value: Math.round(stats.openTickets) },
+                      { name: 'In Progress', value: Math.round(stats.inProgressTickets) },
+                      { name: 'Closed', value: Math.round(stats.closedTickets) },
                     ]}>
                       <XAxis dataKey="name" />
-                      <YAxis />
+                      <YAxis allowDecimals={false} /> {/* Force whole numbers on Y axis */}
                       <ChartTooltip
                         content={({ active, payload }) => {
                           if (!active || !payload) return null;
@@ -222,7 +229,7 @@ const Dashboard = () => {
                                     Count
                                   </span>
                                   <span className="font-bold">
-                                    {payload[0].value}
+                                    {Math.round(payload[0].value)}
                                   </span>
                                 </div>
                               </div>
@@ -232,9 +239,16 @@ const Dashboard = () => {
                       />
                       <Bar
                         dataKey="value"
-                        fill="var(--color-bar1)"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        {[
+                          { name: 'Open', value: stats.openTickets },
+                          { name: 'In Progress', value: stats.inProgressTickets },
+                          { name: 'Closed', value: stats.closedTickets },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -250,9 +264,9 @@ const Dashboard = () => {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'Open', value: stats.openTickets },
-                        { name: 'In Progress', value: stats.inProgressTickets },
-                        { name: 'Closed', value: stats.closedTickets },
+                        { name: 'Open', value: Math.round(stats.openTickets) },
+                        { name: 'In Progress', value: Math.round(stats.inProgressTickets) },
+                        { name: 'Closed', value: Math.round(stats.closedTickets) },
                       ]}
                       cx="50%"
                       cy="50%"
@@ -266,7 +280,7 @@ const Dashboard = () => {
                         { name: 'In Progress', value: stats.inProgressTickets },
                         { name: 'Closed', value: stats.closedTickets },
                       ].map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
                       ))}
                     </Pie>
                     <ChartTooltip
@@ -288,7 +302,7 @@ const Dashboard = () => {
                                   Count
                                 </span>
                                 <span className="font-bold">
-                                  {payload[0].value}
+                                  {Math.round(payload[0].value)}
                                 </span>
                               </div>
                             </div>
