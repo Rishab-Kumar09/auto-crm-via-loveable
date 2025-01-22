@@ -9,6 +9,53 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_performance: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          avg_rating: number | null
+          avg_resolution_time_hours: number | null
+          id: string
+          in_progress_tickets: number | null
+          last_updated: string | null
+          open_tickets: number | null
+          resolved_tickets: number | null
+          total_tickets: number | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          avg_rating?: number | null
+          avg_resolution_time_hours?: number | null
+          id?: string
+          in_progress_tickets?: number | null
+          last_updated?: string | null
+          open_tickets?: number | null
+          resolved_tickets?: number | null
+          total_tickets?: number | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          avg_rating?: number | null
+          avg_resolution_time_hours?: number | null
+          id?: string
+          in_progress_tickets?: number | null
+          last_updated?: string | null
+          open_tickets?: number | null
+          resolved_tickets?: number | null
+          total_tickets?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_performance_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -299,6 +346,47 @@ export type Database = {
           },
         ]
       }
+      ticket_metrics: {
+        Row: {
+          assignee_id: string | null
+          avg_resolution_time_hours: number | null
+          id: string
+          in_progress_tickets: number | null
+          last_updated: string | null
+          open_tickets: number | null
+          resolved_tickets: number | null
+          total_tickets: number | null
+        }
+        Insert: {
+          assignee_id?: string | null
+          avg_resolution_time_hours?: number | null
+          id?: string
+          in_progress_tickets?: number | null
+          last_updated?: string | null
+          open_tickets?: number | null
+          resolved_tickets?: number | null
+          total_tickets?: number | null
+        }
+        Update: {
+          assignee_id?: string | null
+          avg_resolution_time_hours?: number | null
+          id?: string
+          in_progress_tickets?: number | null
+          last_updated?: string | null
+          open_tickets?: number | null
+          resolved_tickets?: number | null
+          total_tickets?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_metrics_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           assignee_id: string | null
@@ -365,7 +453,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       ticket_priority: "low" | "medium" | "high" | "critical"

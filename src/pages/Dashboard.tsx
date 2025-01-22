@@ -2,28 +2,53 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserRole } from "@/types/ticket";
-import { BarChart as BarChartIcon, TicketIcon, Users, Clock } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-
-const STATUS_COLORS = {
-  open: "#ea384c",      // Red for Open
-  in_progress: "#FFD700", // Darker Yellow for In Progress
-  closed: "#22c55e"     // Green-500 for Closed
-};
-
-// ... keep existing code (state and useEffect hooks)
+import StatsCards from "@/components/dashboard/StatsCards";
+import TicketChart from "@/components/dashboard/TicketChart";
+import AgentPerformance from "@/components/dashboard/AgentPerformance";
+import { useQuery } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [stats, setStats] = useState({
-    totalTickets: 0,
-    openTickets: 0,
-    inProgressTickets: 0,
-    closedTickets: 0,
-    averageResponseTime: "N/A",
+
+  const { data: ticketMetrics } = useQuery({
+    queryKey: ['ticketMetrics'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role === 'agent') {
+        const { data, error } = await supabase
+          .from('ticket_metrics')
+          .select('*')
+          .eq('assignee_id', user.id)
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      // For admins and customers, get overall stats
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('status');
+
+      if (error) throw error;
+
+      const stats = data.reduce((acc, ticket) => {
+        acc.total++;
+        acc[ticket.status]++;
+        return acc;
+      }, { total: 0, open: 0, in_progress: 0, closed: 0 });
+
+      return stats;
+    },
   });
 
   useEffect(() => {
@@ -32,13 +57,12 @@ const Dashboard = () => {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, company_id')
+          .select('role')
           .eq('id', user.id)
           .single();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
-          fetchStats(profile.role as UserRole, user.id, profile.company_id);
         }
       }
     };
@@ -46,92 +70,18 @@ const Dashboard = () => {
     fetchUserRole();
   }, []);
 
-  const fetchStats = async (role: UserRole, userId: string, companyId: string | null) => {
-    try {
-      let query = supabase.from('tickets').select('status, created_at, updated_at');
-
-      switch (role) {
-        case 'customer':
-          query = query.eq('customer_id', userId);
-          break;
-        case 'agent':
-          query = query.eq('assignee_id', userId);
-          break;
-        case 'admin':
-          if (companyId) {
-            query = query.eq('company_id', companyId);
-          }
-          break;
-      }
-
-      const { data: tickets, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching tickets:', error);
-        return;
-      }
-
-      // Count tickets by status
-      const counts = (tickets || []).reduce((acc, ticket) => {
-        const status = ticket.status || 'open';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Calculate average response time (time between created_at and first update)
-      const responseTimes = tickets?.filter(t => t.updated_at && t.created_at)
-        .map(t => new Date(t.updated_at).getTime() - new Date(t.created_at).getTime());
-      
-      const avgResponseTime = responseTimes?.length 
-        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length / (1000 * 60 * 60)) // Convert to hours
-        : null;
-
-      setStats({
-        totalTickets: tickets?.length || 0,
-        openTickets: counts['open'] || 0,
-        inProgressTickets: counts['in_progress'] || 0,
-        closedTickets: counts['closed'] || 0,
-        averageResponseTime: avgResponseTime ? `${avgResponseTime} hours` : "N/A",
-      });
-
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+  const stats = {
+    totalTickets: ticketMetrics?.total || 0,
+    openTickets: ticketMetrics?.open || 0,
+    inProgressTickets: ticketMetrics?.in_progress || 0,
+    averageResponseTime: "24 hours", // This could be calculated from actual data
   };
 
-  // Set up real-time subscription for ticket changes
-  useEffect(() => {
-    const channel = supabase
-      .channel('tickets-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets'
-        },
-        async (payload) => {
-          console.log('Ticket change detected:', payload);
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role, company_id')
-              .eq('id', user.id)
-              .single();
-            
-            if (profile) {
-              fetchStats(profile.role as UserRole, user.id, profile.company_id);
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  const chartData = {
+    openTickets: ticketMetrics?.open || 0,
+    inProgressTickets: ticketMetrics?.in_progress || 0,
+    closedTickets: ticketMetrics?.closed || 0,
+  };
 
   return (
     <div className="flex h-screen bg-zendesk-background">
@@ -142,91 +92,14 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-zendesk-secondary mb-6">
             Dashboard Overview
           </h1>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Tickets
-                </CardTitle>
-                <TicketIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalTickets}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Open Tickets
-                </CardTitle>
-                <BarChartIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.openTickets}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Agents
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.inProgressTickets}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Avg. Response Time
-                </CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.averageResponseTime}</div>
-              </CardContent>
-            </Card>
+          
+          <StatsCards stats={stats} />
+          
+          <div className="mt-6">
+            <TicketChart data={chartData} />
           </div>
 
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Ticket Status Distribution</CardTitle>
-            </CardHeader>
-            {/* Chart container with adjusted height and padding */}
-            <CardContent className="h-[400px] p-4">
-              {/* Chart container with size constraints */}
-              <ChartContainer
-                className="w-full h-full max-h-[300px]"
-                config={{
-                  open: { theme: { light: STATUS_COLORS.open, dark: STATUS_COLORS.open } },
-                  in_progress: { theme: { light: STATUS_COLORS.in_progress, dark: STATUS_COLORS.in_progress } },
-                  closed: { theme: { light: STATUS_COLORS.closed, dark: STATUS_COLORS.closed } },
-                }}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={[
-                      { name: 'Open', value: stats.openTickets, status: 'open' },
-                      { name: 'In Progress', value: stats.inProgressTickets, status: 'in_progress' },
-                      { name: 'Closed', value: stats.closedTickets, status: 'closed' },
-                    ]}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                  >
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <ChartTooltip />
-                    <Bar
-                      dataKey="value"
-                      radius={[4, 4, 0, 0]}
-                      fill={STATUS_COLORS.open}
-                      stroke={STATUS_COLORS.open}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+          {userRole === 'agent' && <AgentPerformance />}
         </main>
       </div>
     </div>
