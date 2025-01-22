@@ -43,30 +43,40 @@ const Sidebar = () => {
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching user role:', error);
-          toast({
-            title: "Error",
-            description: "Could not fetch user role",
-            variant: "destructive",
-          });
-          return;
-        }
+          if (error) {
+            console.error('Error fetching user role:', error);
+            toast({
+              title: "Error",
+              description: "Could not fetch user role",
+              variant: "destructive",
+            });
+            return;
+          }
 
-        if (profile) {
-          setUserRole(profile.role as UserRole);
+          if (profile) {
+            setUserRole(profile.role as UserRole);
+          }
         }
+      } catch (error) {
+        console.error('Error:', error);
+        toast({
+          title: "Error",
+          description: "Could not fetch user role",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchUserRole();
