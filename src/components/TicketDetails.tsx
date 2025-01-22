@@ -71,11 +71,17 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     if (!newComment.trim()) return;
 
     try {
+      // Get the current user's session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("No user found");
+
       const { data: commentData, error } = await supabase
         .from("comments")
         .insert([
           {
             ticket_id: ticket.id,
+            user_id: user.id,
             content: newComment,
           },
         ])
