@@ -24,6 +24,7 @@ interface CompanySelectProps {
 
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
   const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
@@ -63,7 +64,7 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
-        <Command>
+        <Command value={value} onValueChange={setValue}>
           <CommandInput placeholder="Search company..." />
           <CommandEmpty>No company found.</CommandEmpty>
           <CommandGroup>
