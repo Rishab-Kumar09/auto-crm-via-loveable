@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +18,8 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [role, setRole] = useState<"customer" | "agent" | "admin">("customer");
+  const [verificationCode, setVerificationCode] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -20,6 +29,27 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
+        // Verify code if role is admin or agent
+        if (role !== "customer") {
+          const { data: codes, error: codeError } = await supabase
+            .from("admin_verification_codes")
+            .select("*")
+            .eq("code", verificationCode)
+            .eq("role", role)
+            .eq("used", false)
+            .single();
+
+          if (codeError || !codes) {
+            toast({
+              title: "Invalid verification code",
+              description: "Please check your code and try again.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -48,7 +78,7 @@ const Auth = () => {
           return;
         }
         
-        // Create profile with default customer role
+        // Create profile with selected role
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
@@ -56,7 +86,7 @@ const Auth = () => {
               id: (await supabase.auth.getUser()).data.user?.id,
               email,
               full_name: fullName,
-              role: 'customer'
+              role
             }
           ]);
 
@@ -67,6 +97,18 @@ const Auth = () => {
             variant: "destructive",
           });
           return;
+        }
+
+        // If admin/agent, mark verification code as used
+        if (role !== "customer") {
+          await supabase
+            .from("admin_verification_codes")
+            .update({ 
+              used: true,
+              used_at: new Date().toISOString(),
+              used_by: (await supabase.auth.getUser()).data.user?.id
+            })
+            .eq("code", verificationCode);
         }
         
         toast({
@@ -120,19 +162,47 @@ const Auth = () => {
         <form className="mt-8 space-y-6" onSubmit={handleAuth}>
           <div className="rounded-md shadow-sm space-y-4">
             {isSignUp && (
-              <div>
-                <label htmlFor="fullName" className="sr-only">
-                  Full Name
-                </label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Full Name"
-                />
-              </div>
+              <>
+                <div>
+                  <label htmlFor="fullName" className="sr-only">
+                    Full Name
+                  </label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Full Name"
+                  />
+                </div>
+                <div>
+                  <Select
+                    value={role}
+                    onValueChange={(value: "customer" | "agent" | "admin") => setRole(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {role !== "customer" && (
+                  <div>
+                    <Input
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="Verification Code"
+                      required
+                    />
+                  </div>
+                )}
+              </>
             )}
             <div>
               <label htmlFor="email" className="sr-only">

@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_verification_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          used: boolean | null
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          used?: boolean | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          used?: boolean | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -139,6 +169,7 @@ export type Database = {
     Enums: {
       ticket_priority: "low" | "medium" | "high" | "critical"
       ticket_status: "open" | "in_progress" | "resolved" | "closed"
+      user_role: "customer" | "agent" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
