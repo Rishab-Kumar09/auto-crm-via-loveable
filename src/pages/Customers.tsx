@@ -26,33 +26,21 @@ const Customers = () => {
 
         if (profileError) throw profileError;
 
-        // For admin, use selected company. For others, use their company_id
+        // If no company is selected and user is admin, don't fetch any customers
+        if (!selectedCompanyId && userProfile?.role === 'admin') {
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
+
+        // For regular users, use their company_id, for admins use selected company
         const companyId = userProfile?.role === 'admin' 
           ? selectedCompanyId 
           : userProfile?.company_id;
 
         if (!companyId) {
-          if (userProfile?.role === 'admin') {
-            setCustomers([]);
-            setLoading(false);
-            return;
-          }
           throw new Error('No company associated with user');
         }
-
-        // Get customers directly associated with company
-        const { data: companyCustomers, error: companyError } = await supabase
-          .from('profiles')
-          .select(`
-            *,
-            companies (
-              name
-            )
-          `)
-          .eq('role', 'customer')
-          .eq('company_id', companyId);
-
-        if (companyError) throw companyError;
 
         // Get customers who have tickets with the company
         const { data: ticketCustomers, error: ticketError } = await supabase
@@ -72,12 +60,13 @@ const Customers = () => {
 
         if (ticketError) throw ticketError;
 
-        // Combine and deduplicate results
-        const allCustomers = [...(companyCustomers || []), ...(ticketCustomers || [])];
-        const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
+        // Filter out customers with no tickets for the selected company
+        const validCustomers = ticketCustomers?.filter(customer => 
+          customer.tickets && customer.tickets.length > 0
+        ) || [];
 
-        console.log('Fetched customers:', uniqueCustomers);
-        setCustomers(uniqueCustomers);
+        console.log('Fetched customers:', validCustomers);
+        setCustomers(validCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
@@ -113,10 +102,16 @@ const Customers = () => {
                   Loading customers...
                 </CardContent>
               </Card>
+            ) : !selectedCompanyId ? (
+              <Card>
+                <CardContent className="p-6">
+                  Please select a company to view customers.
+                </CardContent>
+              </Card>
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  {selectedCompanyId ? "No customers found in selected company." : "Please select a company to view customers."}
+                  No customers found with tickets in the selected company.
                 </CardContent>
               </Card>
             ) : (
