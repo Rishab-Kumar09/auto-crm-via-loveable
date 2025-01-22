@@ -185,7 +185,9 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id);
+        .eq('id', ticket.id)
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -194,7 +196,9 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         description: "Ticket updated successfully.",
       });
 
-      onClose();
+      // Don't close the ticket details view after status update
+      // This allows users to see the updated status and make additional changes if needed
+      // onClose();
     } catch (error) {
       console.error("Error updating ticket:", error);
       toast({
