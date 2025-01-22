@@ -10,9 +10,9 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 
 // Define consistent colors for ticket statuses
 const STATUS_COLORS = {
-  open: "#FEC6A1",      // Soft Orange for Open
-  in_progress: "#F2FCE2", // Soft Green for In Progress
-  closed: "#D3E4FD"     // Soft Blue for Closed
+  open: "#ea384c",      // Red for Open
+  in_progress: "#FEF7CD", // Yellow for In Progress
+  closed: "#F2FCE2"     // Green for Closed
 };
 
 const COLORS = [STATUS_COLORS.open, STATUS_COLORS.in_progress, STATUS_COLORS.closed];
