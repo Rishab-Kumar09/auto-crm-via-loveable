@@ -4,57 +4,88 @@ import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Ticket, TicketStatus, UserRole } from "@/types/ticket";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, User } from "lucide-react";
-
-// Simulated user data - in a real app, this would come from authentication
-const currentUser = {
-  id: "1",
-  name: "John Doe",
-  email: "john@example.com",
-  role: "agent" as UserRole,
-};
-
-// Simulated ticket data - in a real app, this would come from an API
-const mockTickets: Ticket[] = [
-  {
-    id: "1",
-    title: "Cannot access my account",
-    description: "I'm unable to log in to my account after the recent update.",
-    customer: {
-      id: "2",
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      role: "customer",
-    },
-    assignedTo: currentUser,
-    status: "open",
-    priority: "high",
-    created_at: "2h ago",
-    updated_at: "1h ago",
-  },
-  {
-    id: "2",
-    title: "Feature request: Dark mode",
-    description: "Would love to see a dark mode option in the app.",
-    customer: {
-      id: "3",
-      name: "Mike Brown",
-      email: "mike@example.com",
-      role: "customer",
-    },
-    status: "in_progress",
-    priority: "medium",
-    created_at: "1d ago",
-    updated_at: "12h ago",
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const TicketList = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
   const searchQuery = searchParams.get("q")?.toLowerCase();
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const { data: ticketsData, error } = await supabase
+          .from('tickets')
+          .select(`
+            *,
+            customer:profiles!tickets_customer_id_fkey (
+              id,
+              full_name,
+              email,
+              role
+            ),
+            assignedTo:profiles!tickets_assignee_id_fkey (
+              id,
+              full_name,
+              email,
+              role
+            )
+          `);
+
+        if (error) {
+          console.error('Error fetching tickets:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load tickets. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Transform the data to match our Ticket type
+        const formattedTickets = ticketsData.map((ticket: any) => ({
+          id: ticket.id,
+          title: ticket.title,
+          description: ticket.description,
+          status: ticket.status,
+          priority: ticket.priority,
+          customer: {
+            id: ticket.customer.id,
+            name: ticket.customer.full_name,
+            email: ticket.customer.email,
+            role: ticket.customer.role,
+          },
+          ...(ticket.assignedTo && {
+            assignedTo: {
+              id: ticket.assignedTo.id,
+              name: ticket.assignedTo.full_name,
+              email: ticket.assignedTo.email,
+              role: ticket.assignedTo.role,
+            },
+          }),
+          created_at: new Date(ticket.created_at).toLocaleString(),
+          updated_at: new Date(ticket.updated_at).toLocaleString(),
+        }));
+
+        setTickets(formattedTickets);
+      } catch (error) {
+        console.error('Error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load tickets. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, [toast]);
 
   const filteredTickets = searchQuery
     ? tickets.filter(
@@ -71,27 +102,68 @@ const TicketList = () => {
     });
   };
 
-  const handleAssignTicket = (e: React.MouseEvent, ticket: Ticket) => {
+  const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
     e.stopPropagation();
-    if (currentUser.role === "customer") {
+    
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userData.user.id)
+        .single();
+      
+      if (profileError) throw profileError;
+
+      if (profileData.role === "customer") {
+        toast({
+          title: "Permission Denied",
+          description: "Only agents and admins can assign tickets.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('tickets')
+        .update({ 
+          assignee_id: userData.user.id,
+          status: 'in_progress' as TicketStatus 
+        })
+        .eq('id', ticket.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setTickets(tickets.map((t) =>
+        t.id === ticket.id
+          ? {
+              ...t,
+              assignedTo: {
+                id: profileData.id,
+                name: profileData.full_name,
+                email: profileData.email,
+                role: profileData.role,
+              },
+              status: 'in_progress',
+            }
+          : t
+      ));
+
       toast({
-        title: "Permission Denied",
-        description: "Only agents and admins can assign tickets.",
+        title: "Ticket Assigned",
+        description: `Ticket #${ticket.id} has been assigned to you.`,
+      });
+    } catch (error) {
+      console.error('Error assigning ticket:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign ticket. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    const updatedTickets = tickets.map((t) =>
-      t.id === ticket.id
-        ? { ...t, assignedTo: currentUser, status: "in_progress" as TicketStatus }
-        : t
-    );
-    setTickets(updatedTickets);
-    toast({
-      title: "Ticket Assigned",
-      description: `Ticket #${ticket.id} has been assigned to you.`,
-    });
   };
 
   const getStatusColor = (status: TicketStatus) => {
@@ -106,6 +178,16 @@ const TicketList = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="text-center text-zendesk-muted">
+          Loading tickets...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -137,7 +219,7 @@ const TicketList = () => {
                   >
                     {ticket.status}
                   </Badge>
-                  {!ticket.assignedTo && currentUser.role !== "customer" && (
+                  {!ticket.assignedTo && (
                     <Button
                       variant="outline"
                       size="sm"
