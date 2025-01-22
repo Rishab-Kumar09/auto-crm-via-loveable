@@ -26,29 +26,43 @@ const Customers = () => {
         if (profileError) throw profileError;
         if (!adminProfile?.company_id) throw new Error('No company associated with admin');
 
-        // Fetch customers who either belong to the company directly or have created tickets with the company
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select(`
-            *,
-            companies (
-              name
-            ),
-            tickets!customer_id (
-              id,
-              company_id
-            )
-          `)
-          .eq('role', 'customer')
-          .or('company_id.eq.' + adminProfile.company_id + ',tickets.company_id.eq.' + adminProfile.company_id);
+        // Fetch customers using two separate queries and combine results
+        const [companyCustomers, ticketCustomers] = await Promise.all([
+          // Get customers directly associated with company
+          supabase
+            .from('profiles')
+            .select(`
+              *,
+              companies (
+                name
+              )
+            `)
+            .eq('role', 'customer')
+            .eq('company_id', adminProfile.company_id),
 
-        if (error) throw error;
+          // Get customers who have tickets with the company
+          supabase
+            .from('profiles')
+            .select(`
+              *,
+              companies (
+                name
+              ),
+              tickets!customer_id (
+                id,
+                company_id
+              )
+            `)
+            .eq('role', 'customer')
+            .eq('tickets.company_id', adminProfile.company_id)
+        ]);
 
-        // Filter out duplicates and format the data
-        const uniqueCustomers = profiles?.filter((profile) => {
-          return profile.company_id === adminProfile.company_id || 
-                 profile.tickets?.some(ticket => ticket.company_id === adminProfile.company_id);
-        }) || [];
+        if (companyCustomers.error) throw companyCustomers.error;
+        if (ticketCustomers.error) throw ticketCustomers.error;
+
+        // Combine and deduplicate results
+        const allCustomers = [...(companyCustomers.data || []), ...(ticketCustomers.data || [])];
+        const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
 
         console.log('Fetched customers:', uniqueCustomers);
         setCustomers(uniqueCustomers);
