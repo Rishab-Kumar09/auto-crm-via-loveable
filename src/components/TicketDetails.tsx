@@ -182,18 +182,22 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id);
+        .eq('id', ticket.id)
+        .select()
+        .single();
 
       if (error) {
         console.error("Error updating ticket:", error);
         throw error;
       }
 
-      // Update the local ticket state to reflect changes
-      Object.assign(ticket, updates);
+      if (data) {
+        // Update the local ticket state to reflect changes
+        Object.assign(ticket, data);
+      }
 
       toast({
         title: "Success",
