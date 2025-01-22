@@ -212,6 +212,35 @@ const TicketList = () => {
     }
   };
 
+  const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
+    e.stopPropagation(); // Prevent ticket details from opening
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const { error } = await supabase
+        .from("tickets")
+        .update({ assignee_id: user.id })
+        .eq("id", ticket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Ticket assigned successfully",
+      });
+
+      // Refresh tickets list
+      fetchTickets();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-8">
