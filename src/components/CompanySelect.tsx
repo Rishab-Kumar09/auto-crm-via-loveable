@@ -2,18 +2,12 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useState } from "react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,9 +17,6 @@ interface CompanySelectProps {
 }
 
 const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
@@ -43,61 +34,37 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
     (company) => company.id === selectedId
   );
 
-  const filteredCompanies = companies.filter((company) =>
-    company.name.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={isLoading}
-        >
+    <Select
+      value={selectedId || ""}
+      onValueChange={(value) => onSelect(value || null)}
+      disabled={isLoading}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select company">
           {isLoading ? (
             "Loading companies..."
           ) : (
-            <>
-              {selectedCompany ? selectedCompany.name : "Select company..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </>
+            selectedCompany?.name || "Select company"
           )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder="Search company..." 
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandEmpty>No company found.</CommandEmpty>
-          <CommandGroup>
-            {!isLoading && filteredCompanies.map((company) => (
-              <CommandItem
-                key={company.id}
-                onSelect={() => {
-                  onSelect(company.id);
-                  setOpen(false);
-                  setSearch("");
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedId === company.id ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {company.name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {companies.map((company) => (
+          <SelectItem key={company.id} value={company.id}>
+            <div className="flex items-center">
+              <Check
+                className={cn(
+                  "mr-2 h-4 w-4",
+                  selectedId === company.id ? "opacity-100" : "opacity-0"
+                )}
+              />
+              {company.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
 
