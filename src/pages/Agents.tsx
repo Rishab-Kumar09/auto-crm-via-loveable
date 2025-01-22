@@ -27,9 +27,9 @@ const Agents = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "in_progress":
-        return "bg-[#F97316] text-white"; // Bright Orange
+        return "bg-[#FEF7CD] text-yellow-800"; // Soft Yellow
       case "open":
-        return "bg-red-500 text-white";
+        return "bg-[#FFDEE2] text-red-800"; // Soft Pink
       case "closed":
         return "bg-green-500 text-white";
       default:
@@ -42,7 +42,7 @@ const Agents = () => {
       case "high":
         return "bg-red-500 text-white";
       case "medium":
-        return "bg-[#D946EF] text-white"; // Magenta Pink
+        return "bg-[#FEF7CD] text-yellow-800"; // Soft Yellow
       case "low":
         return "bg-green-500 text-white";
       default:
