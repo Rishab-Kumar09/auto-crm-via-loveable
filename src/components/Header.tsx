@@ -1,13 +1,16 @@
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState(searchParams.get("q") || "");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -15,6 +18,15 @@ const Header = () => {
     toast({
       title: "Search updated",
       description: searchValue ? `Showing results for "${searchValue}"` : "Showing all tickets",
+    });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
     });
   };
 
@@ -44,6 +56,15 @@ const Header = () => {
         >
           <Bell className="w-5 h-5 text-zendesk-secondary" />
         </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </Button>
         <div className="w-8 h-8 rounded-full bg-zendesk-primary text-white flex items-center justify-center">
           <span className="text-sm font-medium">JD</span>
         </div>

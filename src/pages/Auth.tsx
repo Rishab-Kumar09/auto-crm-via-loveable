@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
@@ -19,26 +20,52 @@ const Auth = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
         });
         
-        if (error) {
-          if (error.message.includes("User already registered")) {
+        if (signUpError) {
+          if (signUpError.message.includes("User already registered")) {
             toast({
               title: "Account exists",
               description: "This email is already registered. Please sign in instead.",
               variant: "destructive",
             });
-            setIsSignUp(false); // Switch to sign in mode
+            setIsSignUp(false);
           } else {
             toast({
               title: "Error",
-              description: error.message,
+              description: signUpError.message,
               variant: "destructive",
             });
           }
+          return;
+        }
+        
+        // Create profile with default customer role
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: (await supabase.auth.getUser()).data.user?.id,
+              email,
+              full_name: fullName,
+              role: 'customer'
+            }
+          ]);
+
+        if (profileError) {
+          toast({
+            title: "Error",
+            description: "Failed to create user profile",
+            variant: "destructive",
+          });
           return;
         }
         
@@ -92,6 +119,21 @@ const Auth = () => {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleAuth}>
           <div className="rounded-md shadow-sm space-y-4">
+            {isSignUp && (
+              <div>
+                <label htmlFor="fullName" className="sr-only">
+                  Full Name
+                </label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Full Name"
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
