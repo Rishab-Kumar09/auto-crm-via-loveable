@@ -63,14 +63,14 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
-        <Command value={selectedId || ""}>
+        <Command>
           <CommandInput placeholder="Search company..." />
           <CommandEmpty>No company found.</CommandEmpty>
           <CommandGroup>
             {!isLoading && companies.map((company) => (
               <CommandItem
                 key={company.id}
-                value={company.name.toLowerCase()}
+                value={company.name}
                 onSelect={() => {
                   onSelect(company.id);
                   setOpen(false);
