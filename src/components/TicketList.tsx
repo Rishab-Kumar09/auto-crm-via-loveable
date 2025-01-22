@@ -9,7 +9,7 @@ import { MessageSquare, User } from "lucide-react";
 
 // Simulated user data - in a real app, this would come from authentication
 const currentUser = {
-  id: 1,
+  id: "1",
   name: "John Doe",
   email: "john@example.com",
   role: "agent" as UserRole,
@@ -18,45 +18,35 @@ const currentUser = {
 // Simulated ticket data - in a real app, this would come from an API
 const mockTickets: Ticket[] = [
   {
-    id: 1,
-    subject: "Cannot access my account",
+    id: "1",
+    title: "Cannot access my account",
     description: "I'm unable to log in to my account after the recent update.",
     customer: {
-      id: 2,
+      id: "2",
       name: "Sarah Johnson",
       email: "sarah@example.com",
       role: "customer",
     },
     assignedTo: currentUser,
-    status: "Open",
-    priority: "High",
-    created: "2h ago",
-    updated: "1h ago",
-    comments: [
-      {
-        id: 1,
-        ticketId: 1,
-        user: currentUser,
-        content: "I'll look into this right away.",
-        created: "1h ago",
-      },
-    ],
+    status: "open",
+    priority: "high",
+    created_at: "2h ago",
+    updated_at: "1h ago",
   },
   {
-    id: 2,
-    subject: "Feature request: Dark mode",
+    id: "2",
+    title: "Feature request: Dark mode",
     description: "Would love to see a dark mode option in the app.",
     customer: {
-      id: 3,
+      id: "3",
       name: "Mike Brown",
       email: "mike@example.com",
       role: "customer",
     },
-    status: "Pending",
-    priority: "Medium",
-    created: "1d ago",
-    updated: "12h ago",
-    comments: [],
+    status: "in_progress",
+    priority: "medium",
+    created_at: "1d ago",
+    updated_at: "12h ago",
   },
 ];
 
@@ -69,7 +59,7 @@ const TicketList = () => {
   const filteredTickets = searchQuery
     ? tickets.filter(
         (ticket) =>
-          ticket.subject.toLowerCase().includes(searchQuery) ||
+          ticket.title.toLowerCase().includes(searchQuery) ||
           ticket.customer.name.toLowerCase().includes(searchQuery)
       )
     : tickets;
@@ -77,7 +67,7 @@ const TicketList = () => {
   const handleTicketClick = (ticket: Ticket) => {
     toast({
       title: `Ticket #${ticket.id}`,
-      description: `Viewing ticket: ${ticket.subject}`,
+      description: `Viewing ticket: ${ticket.title}`,
     });
   };
 
@@ -94,7 +84,7 @@ const TicketList = () => {
 
     const updatedTickets = tickets.map((t) =>
       t.id === ticket.id
-        ? { ...t, assignedTo: currentUser, status: "Pending" as TicketStatus }
+        ? { ...t, assignedTo: currentUser, status: "in_progress" as TicketStatus }
         : t
     );
     setTickets(updatedTickets);
@@ -106,12 +96,14 @@ const TicketList = () => {
 
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
-      case "Open":
+      case "open":
         return "bg-red-100 text-red-800";
-      case "Pending":
+      case "in_progress":
         return "bg-yellow-100 text-yellow-800";
-      case "Closed":
+      case "closed":
         return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -132,16 +124,10 @@ const TicketList = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <h3 className="font-medium text-zendesk-secondary">{ticket.subject}</h3>
+                  <h3 className="font-medium text-zendesk-secondary">{ticket.title}</h3>
                   <div className="flex items-center space-x-2 text-sm text-zendesk-muted">
                     <User className="w-4 h-4" />
                     <span>{ticket.customer.name}</span>
-                    {ticket.comments.length > 0 && (
-                      <>
-                        <MessageSquare className="w-4 h-4 ml-2" />
-                        <span>{ticket.comments.length}</span>
-                      </>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -160,7 +146,7 @@ const TicketList = () => {
                       Assign to me
                     </Button>
                   )}
-                  <span className="text-sm text-zendesk-muted">{ticket.created}</span>
+                  <span className="text-sm text-zendesk-muted">{ticket.created_at}</span>
                 </div>
               </div>
             </div>
