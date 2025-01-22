@@ -33,9 +33,6 @@ const Customers = () => {
           .from('profiles')
           .select(`
             *,
-            companies (
-              name
-            ),
             tickets!customer_id (
               id,
               company_id
@@ -99,7 +96,6 @@ const Customers = () => {
                   <CardContent>
                     <div className="space-y-2">
                       <p><strong>Email:</strong> {customer.email}</p>
-                      <p><strong>Company:</strong> {customer.companies?.name || 'No company'}</p>
                       <p><strong>Joined:</strong> {new Date(customer.created_at).toLocaleDateString()}</p>
                     </div>
                   </CardContent>
