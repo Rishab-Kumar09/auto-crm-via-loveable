@@ -30,14 +30,27 @@ const App = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        fetchUserRole(session.user.id);
-      } else {
+    const fetchInitialSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        
+        if (initialSession) {
+          await fetchUserRole(initialSession.user.id);
+        }
+      } catch (error) {
+        console.error('Error fetching initial session:', error);
+        toast({
+          title: "Error",
+          description: "Could not fetch user session. Please try logging in again.",
+          variant: "destructive",
+        });
+      } finally {
         setLoading(false);
       }
-    });
+    };
+
+    fetchInitialSession();
 
     const {
       data: { subscription },
@@ -52,7 +65,7 @@ const App = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]);
 
   const fetchUserRole = async (userId: string) => {
     try {
@@ -86,7 +99,11 @@ const App = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-zendesk-background">
+        <div className="text-lg text-zendesk-secondary">Loading...</div>
+      </div>
+    );
   }
 
   return (
