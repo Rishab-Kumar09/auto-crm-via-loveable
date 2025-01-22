@@ -32,7 +32,20 @@ const TicketList = () => {
   // Fetch tickets function
   const fetchTickets = async () => {
     try {
-      const { data: ticketsData, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setUserRole(profile.role as UserRole);
+      }
+
+      const query = supabase
         .from('tickets')
         .select(`
           *,
@@ -54,15 +67,14 @@ const TicketList = () => {
           )
         `);
 
-      if (error) {
-        console.error('Error fetching tickets:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load tickets. Please try again.",
-          variant: "destructive",
-        });
-        return;
+      // For agents, only fetch assigned tickets
+      if (profile?.role === 'agent') {
+        query.eq('assignee_id', user.id);
       }
+
+      const { data: ticketsData, error } = await query;
+
+      if (error) throw error;
 
       const formattedTickets = ticketsData.map((ticket: any) => ({
         id: ticket.id,
@@ -108,6 +120,10 @@ const TicketList = () => {
   };
 
   useEffect(() => {
+    fetchTickets();
+  }, [toast]);
+
+  useEffect(() => {
     const fetchUserRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -125,11 +141,6 @@ const TicketList = () => {
 
     fetchUserRole();
   }, []);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchTickets();
-  }, [toast]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -168,66 +179,11 @@ const TicketList = () => {
     const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
     const matchesCompany = !companyFilter || ticket.company?.id === companyFilter;
 
-    // For admin users, only use priority filter
-    if (userRole === 'admin') {
-      return matchesSearch && matchesStatus && matchesPriority;
-    }
-    
-    // For other users, use company filter
-    return matchesSearch && matchesStatus && matchesCompany;
+    return matchesSearch && matchesStatus && matchesPriority && matchesCompany;
   });
 
   const handleTicketClick = (ticket: Ticket) => {
     setSelectedTicket(ticket);
-  };
-
-  const handleAssignTicket = async (e: React.MouseEvent, ticket: Ticket) => {
-    e.stopPropagation();
-    
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      const { error: updateError } = await supabase
-        .from('tickets')
-        .update({ 
-          assignee_id: userData.user.id,
-          status: 'in_progress' as TicketStatus 
-        })
-        .eq('id', ticket.id);
-
-      if (updateError) throw updateError;
-
-      // Update local state
-      const updatedTickets = tickets.map((t) =>
-        t.id === ticket.id
-          ? {
-              ...t,
-              assignedTo: {
-                id: userData.user.id,
-                name: userRole,
-                email: "",
-                role: userRole,
-              },
-              status: 'in_progress' as TicketStatus,
-            }
-          : t
-      );
-
-      setTickets(updatedTickets);
-
-      toast({
-        title: "Ticket Assigned",
-        description: `Ticket #${ticket.id} has been assigned to you.`,
-      });
-    } catch (error) {
-      console.error('Error assigning ticket:', error);
-      toast({
-        title: "Error",
-        description: "Failed to assign ticket. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
   const getStatusColor = (status: TicketStatus) => {
@@ -279,31 +235,15 @@ const TicketList = () => {
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-4 border-b border-zendesk-border flex justify-between items-center">
         <h2 className="text-lg font-semibold text-zendesk-secondary">
-          {searchQuery ? `Search Results (${filteredTickets.length})` : "All Tickets"}
+          {searchQuery ? `Search Results (${filteredTickets.length})` : 
+           userRole === 'agent' ? "My Assigned Tickets" : "All Tickets"}
         </h2>
         <div className="flex items-center gap-4">
-          {userRole !== 'admin' && (
+          {userRole !== 'agent' && (
             <CompanySelect
               selectedId={companyFilter}
               onSelect={setCompanyFilter}
             />
-          )}
-          {userRole === 'admin' && (
-            <Select
-              value={priorityFilter}
-              onValueChange={(value) => setPriorityFilter(value as TicketPriority | "all")}
-            >
-              <SelectTrigger className="w-[180px]">
-                <Flag className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="high">High Priority</SelectItem>
-                <SelectItem value="medium">Medium Priority</SelectItem>
-                <SelectItem value="low">Low Priority</SelectItem>
-              </SelectContent>
-            </Select>
           )}
           <Select
             value={statusFilter}
