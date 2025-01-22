@@ -72,6 +72,15 @@ const Sidebar = () => {
     fetchUserRole();
   }, [toast]);
 
+  const handleNavigation = (item: { label: string; href: string }) => {
+    if (item.href !== "/") {
+      toast({
+        title: "Navigation",
+        description: `${item.label} page is not implemented yet.`,
+      });
+    }
+  };
+
   const menuItems = getMenuItems(userRole);
 
   if (loading) {
@@ -114,15 +123,6 @@ const Sidebar = () => {
       </nav>
     </div>
   );
-};
-
-const handleNavigation = (item: { label: string; href: string }) => {
-  if (item.href !== "/") {
-    toast({
-      title: "Navigation",
-      description: `${item.label} page is not implemented yet.`,
-    });
-  }
 };
 
 export default Sidebar;
