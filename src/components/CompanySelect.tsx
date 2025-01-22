@@ -42,14 +42,6 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
     (company) => company.id === selectedId
   );
 
-  if (isLoading) {
-    return (
-      <Button variant="outline" className="w-full" disabled>
-        Loading companies...
-      </Button>
-    );
-  }
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -58,9 +50,16 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={isLoading}
         >
-          {selectedCompany ? selectedCompany.name : "Select company..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {isLoading ? (
+            "Loading companies..."
+          ) : (
+            <>
+              {selectedCompany ? selectedCompany.name : "Select company..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
@@ -68,9 +67,10 @@ const CompanySelect = ({ onSelect, selectedId }: CompanySelectProps) => {
           <CommandInput placeholder="Search company..." />
           <CommandEmpty>No company found.</CommandEmpty>
           <CommandGroup>
-            {companies.map((company) => (
+            {!isLoading && companies.map((company) => (
               <CommandItem
                 key={company.id}
+                value={company.id}
                 onSelect={() => {
                   onSelect(company.id);
                   setOpen(false);
