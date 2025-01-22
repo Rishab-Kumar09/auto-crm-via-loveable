@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Ticket } from "@/types/ticket";
-import { useNavigate } from "react-router-dom";
+import TicketDetails from "@/components/TicketDetails";
 import {
   Accordion,
   AccordionContent,
@@ -14,12 +14,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -39,7 +40,6 @@ const Customers = () => {
           throw new Error('No company associated with user');
         }
 
-        // Get customers who have tickets with the admin/agent's company
         const { data: ticketCustomers, error: ticketError } = await supabase
           .from('profiles')
           .select(`
@@ -50,7 +50,20 @@ const Customers = () => {
               status,
               priority,
               created_at,
-              company_id
+              company_id,
+              description,
+              customer:profiles!tickets_customer_id_fkey (
+                id,
+                name:full_name,
+                email,
+                role
+              ),
+              assignedTo:profiles!tickets_assignee_id_fkey (
+                id,
+                name:full_name,
+                email,
+                role
+              )
             )
           `)
           .eq('role', 'customer')
@@ -58,12 +71,10 @@ const Customers = () => {
 
         if (ticketError) throw ticketError;
 
-        // Filter out customers with no tickets for the company
         const validCustomers = ticketCustomers?.filter(customer => 
           customer.tickets && customer.tickets.length > 0
         ) || [];
 
-        console.log('Fetched customers:', validCustomers);
         setCustomers(validCustomers);
       } catch (error) {
         console.error('Error fetching customers:', error);
@@ -106,10 +117,6 @@ const Customers = () => {
     }
   };
 
-  const handleViewTicket = (ticketId: string) => {
-    navigate(`/tickets?ticketId=${ticketId}`);
-  };
-
   return (
     <div className="flex h-screen bg-zendesk-background">
       <Sidebar />
@@ -136,7 +143,12 @@ const Customers = () => {
               customers.map((customer) => (
                 <Card key={customer.id}>
                   <CardHeader>
-                    <CardTitle>{customer.full_name || 'Unnamed Customer'}</CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>{customer.full_name || 'Unnamed Customer'}</CardTitle>
+                      <Badge variant="secondary" className="text-lg px-4 py-1">
+                        {customer.tickets.length} Ticket{customer.tickets.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -147,18 +159,18 @@ const Customers = () => {
                       
                       <Accordion type="single" collapsible>
                         <AccordionItem value="tickets">
-                          <AccordionTrigger>
-                            Customer Tickets ({customer.tickets.length})
+                          <AccordionTrigger className="hover:no-underline">
+                            <span className="text-base font-medium">View Tickets</span>
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-3">
                               {customer.tickets.map((ticket: any) => (
                                 <div 
                                   key={ticket.id}
-                                  className="p-3 bg-gray-50 rounded-lg space-y-2"
+                                  className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:border-gray-300 transition-colors"
                                 >
                                   <div className="flex items-center justify-between">
-                                    <h4 className="font-medium">{ticket.title}</h4>
+                                    <h4 className="font-medium text-lg text-zendesk-secondary">{ticket.title}</h4>
                                     <div className="flex gap-2">
                                       <Badge className={getStatusColor(ticket.status)}>
                                         {ticket.status.replace('_', ' ')}
@@ -170,12 +182,14 @@ const Customers = () => {
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center justify-between text-sm text-gray-500">
-                                    <span>Created: {new Date(ticket.created_at).toLocaleDateString()}</span>
+                                  <div className="flex items-center justify-between mt-3">
+                                    <span className="text-sm text-gray-500">
+                                      Created: {new Date(ticket.created_at).toLocaleDateString()}
+                                    </span>
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                      onClick={() => handleViewTicket(ticket.id)}
+                                      onClick={() => setSelectedTicket(ticket)}
                                     >
                                       View Ticket
                                     </Button>
@@ -194,6 +208,17 @@ const Customers = () => {
           </div>
         </main>
       </div>
+
+      <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedTicket && (
+            <TicketDetails
+              ticket={selectedTicket}
+              onClose={() => setSelectedTicket(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
