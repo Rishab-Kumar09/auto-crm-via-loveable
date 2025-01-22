@@ -218,20 +218,20 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           id: data.id,
           title: data.title,
           description: data.description,
-          status: data.status,
-          priority: data.priority,
+          status: data.status as TicketStatus,
+          priority: data.priority as TicketPriority,
           customer: {
             id: data.customer.id,
             name: data.customer.full_name,
             email: data.customer.email,
-            role: data.customer.role,
+            role: data.customer.role as UserRole,
           },
           ...(data.assignedTo && {
             assignedTo: {
               id: data.assignedTo.id,
               name: data.assignedTo.full_name,
               email: data.assignedTo.email,
-              role: data.assignedTo.role,
+              role: data.assignedTo.role as UserRole,
             },
           }),
           ...(data.company && {
