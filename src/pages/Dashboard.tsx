@@ -12,7 +12,7 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 const STATUS_COLORS = {
   open: "#ea384c",      // Red for Open
   in_progress: "#FFD700", // Darker Yellow for In Progress
-  closed: "#F2FCE2"     // Green for Closed
+  closed: "#15803d"     // Darker Green for Closed (using Tailwind's green-700)
 };
 
 const COLORS = [STATUS_COLORS.open, STATUS_COLORS.in_progress, STATUS_COLORS.closed];
