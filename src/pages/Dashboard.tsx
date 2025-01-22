@@ -261,7 +261,11 @@ const Dashboard = () => {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {pieChartData.map((_, index) => (
+                      {[
+                        { name: 'Open', value: stats.openTickets },
+                        { name: 'In Progress', value: stats.inProgressTickets },
+                        { name: 'Closed', value: stats.closedTickets },
+                      ].map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
