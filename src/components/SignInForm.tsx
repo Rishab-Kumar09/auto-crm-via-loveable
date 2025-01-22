@@ -18,6 +18,9 @@ const SignInForm = ({ onSuccess, onError }: SignInFormProps) => {
     setIsLoading(true);
 
     try {
+      // First clear any existing session
+      await supabase.auth.signOut();
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -26,6 +29,11 @@ const SignInForm = ({ onSuccess, onError }: SignInFormProps) => {
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
           throw new Error("The email or password you entered is incorrect.");
+        }
+        if (error.message.includes("refresh_token_not_found")) {
+          // Handle expired or invalid session
+          await supabase.auth.signOut(); // Clear the invalid session
+          throw new Error("Your session has expired. Please sign in again.");
         }
         throw error;
       }
