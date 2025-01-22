@@ -42,7 +42,7 @@ const Dashboard = () => {
 
   const fetchStats = async (role: UserRole, userId: string, companyId: string | null) => {
     try {
-      let baseQuery = supabase.from('tickets').select('*', { count: 'exact' });
+      let baseQuery = supabase.from('tickets');
 
       // Apply filters based on user role
       switch (role) {
@@ -59,26 +59,31 @@ const Dashboard = () => {
           break;
       }
 
-      // Get total count
-      const { count: total } = await baseQuery;
+      // Get all tickets and their statuses in a single query
+      const { data: tickets, error } = await baseQuery.select('status');
+      
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        return;
+      }
 
-      // Get counts by status
-      const { count: open } = await baseQuery.eq('status', 'open');
-      const { count: inProgress } = await baseQuery.eq('status', 'in_progress');
-      const { count: closed } = await baseQuery.eq('status', 'closed');
+      // Count tickets by status
+      const counts = tickets.reduce((acc, ticket) => {
+        const status = ticket.status || 'open';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
       setStats({
-        totalTickets: total || 0,
-        openTickets: open || 0,
-        inProgressTickets: inProgress || 0,
-        closedTickets: closed || 0,
+        totalTickets: tickets.length,
+        openTickets: counts['open'] || 0,
+        inProgressTickets: counts['in_progress'] || 0,
+        closedTickets: counts['closed'] || 0,
       });
 
       console.log('Stats updated:', {
-        total,
-        open,
-        inProgress,
-        closed,
+        total: tickets.length,
+        counts,
         role,
         userId,
         companyId
@@ -203,7 +208,11 @@ const Dashboard = () => {
                   }}
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={barChartData}>
+                    <BarChart data={[
+                      { name: 'Open', value: stats.openTickets },
+                      { name: 'In Progress', value: stats.inProgressTickets },
+                      { name: 'Closed', value: stats.closedTickets },
+                    ]}>
                       <XAxis dataKey="name" />
                       <YAxis />
                       <ChartTooltip
@@ -252,7 +261,11 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={pieChartData}
+                      data={[
+                        { name: 'Open', value: stats.openTickets },
+                        { name: 'In Progress', value: stats.inProgressTickets },
+                        { name: 'Closed', value: stats.closedTickets },
+                      ]}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
