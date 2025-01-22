@@ -2,9 +2,8 @@ import { Home, Inbox, Users, Settings, HelpCircle, PlusCircle, BarChart } from "
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/types/ticket";
-
-// Simulated user role - in a real app, this would come from authentication
-const userRole: UserRole = "agent";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const getMenuItems = (role: UserRole) => {
   const baseItems = [
@@ -39,16 +38,49 @@ const getMenuItems = (role: UserRole) => {
 
 const Sidebar = () => {
   const { toast } = useToast();
+  const [userRole, setUserRole] = useState<UserRole>("customer");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user role:', error);
+          toast({
+            title: "Error",
+            description: "Could not fetch user role",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (profile) {
+          setUserRole(profile.role as UserRole);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchUserRole();
+  }, [toast]);
+
   const menuItems = getMenuItems(userRole);
 
-  const handleNavigation = (item: typeof menuItems[0]) => {
-    if (item.href !== "/") {
-      toast({
-        title: "Navigation",
-        description: `${item.label} page is not implemented yet.`,
-      });
-    }
-  };
+  if (loading) {
+    return (
+      <div className="h-screen w-64 bg-white border-r border-zendesk-border flex items-center justify-center">
+        <p className="text-zendesk-muted">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-64 bg-white border-r border-zendesk-border flex flex-col">
@@ -82,6 +114,15 @@ const Sidebar = () => {
       </nav>
     </div>
   );
+};
+
+const handleNavigation = (item: { label: string; href: string }) => {
+  if (item.href !== "/") {
+    toast({
+      title: "Navigation",
+      description: `${item.label} page is not implemented yet.`,
+    });
+  }
 };
 
 export default Sidebar;
