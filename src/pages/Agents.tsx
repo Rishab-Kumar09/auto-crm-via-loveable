@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string;
@@ -22,6 +23,32 @@ const Agents = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "in_progress":
+        return "bg-[#F97316] text-white"; // Bright Orange
+      case "open":
+        return "bg-red-500 text-white";
+      case "closed":
+        return "bg-green-500 text-white";
+      default:
+        return "bg-gray-500 text-white";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500 text-white";
+      case "medium":
+        return "bg-[#D946EF] text-white"; // Magenta Pink
+      case "low":
+        return "bg-green-500 text-white";
+      default:
+        return "bg-gray-500 text-white";
+    }
+  };
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -121,12 +148,10 @@ const Agents = () => {
                               >
                                 <span className="text-sm">{ticket.title}</span>
                                 <div className="flex gap-2">
-                                  <Badge variant={ticket.status === 'open' ? 'destructive' : 
-                                    ticket.status === 'in_progress' ? 'default' : 'secondary'}>
-                                    {ticket.status}
+                                  <Badge className={cn(getStatusColor(ticket.status))}>
+                                    {ticket.status.replace('_', ' ')}
                                   </Badge>
-                                  <Badge variant={ticket.priority === 'high' ? 'destructive' : 
-                                    ticket.priority === 'medium' ? 'default' : 'secondary'}>
+                                  <Badge className={cn(getPriorityColor(ticket.priority))}>
                                     {ticket.priority}
                                   </Badge>
                                 </div>
