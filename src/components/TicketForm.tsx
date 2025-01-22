@@ -28,14 +28,34 @@ const TicketForm = () => {
         return;
       }
 
-      const { error } = await supabase.from("tickets").insert({
-        title,
-        description,
-        customer_id: session.session.user.id,
-        company_id: companyId,
-      });
+      // Create the ticket
+      const { data: ticket, error } = await supabase
+        .from("tickets")
+        .insert({
+          title,
+          description,
+          customer_id: session.session.user.id,
+          company_id: companyId,
+        })
+        .select(`
+          *,
+          company:companies (
+            name
+          )
+        `)
+        .single();
 
       if (error) throw error;
+
+      // Notify admins about the new ticket
+      const { error: notificationError } = await supabase.functions.invoke('notify-ticket', {
+        body: { ticket }
+      });
+
+      if (notificationError) {
+        console.error('Error notifying admins:', notificationError);
+        // Don't throw here, as the ticket was created successfully
+      }
 
       toast({
         title: "Success",
