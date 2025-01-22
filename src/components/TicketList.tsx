@@ -51,20 +51,20 @@ const TicketList = () => {
           id: ticket.id,
           title: ticket.title,
           description: ticket.description,
-          status: ticket.status,
+          status: ticket.status as TicketStatus,
           priority: ticket.priority,
           customer: {
             id: ticket.customer.id,
             name: ticket.customer.full_name,
             email: ticket.customer.email,
-            role: ticket.customer.role,
+            role: ticket.customer.role as UserRole,
           },
           ...(ticket.assignedTo && {
             assignedTo: {
               id: ticket.assignedTo.id,
               name: ticket.assignedTo.full_name,
               email: ticket.assignedTo.email,
-              role: ticket.assignedTo.role,
+              role: ticket.assignedTo.role as UserRole,
             },
           }),
           created_at: new Date(ticket.created_at).toLocaleString(),
@@ -137,7 +137,7 @@ const TicketList = () => {
       if (updateError) throw updateError;
 
       // Update local state
-      setTickets(tickets.map((t) =>
+      const updatedTickets = tickets.map((t) =>
         t.id === ticket.id
           ? {
               ...t,
@@ -145,12 +145,14 @@ const TicketList = () => {
                 id: profileData.id,
                 name: profileData.full_name,
                 email: profileData.email,
-                role: profileData.role,
+                role: profileData.role as UserRole,
               },
-              status: 'in_progress',
+              status: 'in_progress' as TicketStatus,
             }
           : t
-      ));
+      );
+
+      setTickets(updatedTickets);
 
       toast({
         title: "Ticket Assigned",
