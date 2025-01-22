@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Customers from "./pages/Customers";
+import Agents from "./pages/Agents";
 import Settings from "./pages/Settings";
 import React, { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
@@ -17,21 +18,43 @@ const queryClient = new QueryClient();
 const App = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (session) {
+        fetchUserRole(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        fetchUserRole(session.user.id);
+      } else {
+        setUserRole(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserRole = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    setUserRole(profile?.role || null);
+    setLoading(false);
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -82,6 +105,16 @@ const App = () => {
                     <Customers />
                   ) : (
                     <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/agents"
+                element={
+                  session && userRole === 'admin' ? (
+                    <Agents />
+                  ) : (
+                    <Navigate to="/dashboard" replace />
                   )
                 }
               />

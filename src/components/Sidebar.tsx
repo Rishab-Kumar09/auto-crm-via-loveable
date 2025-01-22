@@ -1,4 +1,4 @@
-import { Home, Inbox, Users, Settings, HelpCircle, PlusCircle } from "lucide-react";
+import { Home, Inbox, Users, Settings, HelpCircle, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/types/ticket";
@@ -33,6 +33,7 @@ const getMenuItems = (role: UserRole) => {
   return [
     ...baseItems,
     { icon: Users, label: "Customers", href: "/customers" },
+    { icon: UserCog, label: "Agents", href: "/agents" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
 };
