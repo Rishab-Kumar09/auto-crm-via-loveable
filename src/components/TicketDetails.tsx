@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Flag, UserPlus, CheckSquare, RefreshCw, Building } from "lucide-react";
+import { Clock, MessageSquare, User, Building, UserPlus, CheckSquare, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
+import { Ticket, TicketComment, UserRole, TicketStatus } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -26,7 +26,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [agents, setAgents] = useState<{ id: string; name: string; email: string; role: UserRole }[]>([]);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -47,13 +47,15 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     const fetchAgents = async () => {
       const { data: agentsData } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, email, role')
         .eq('role', 'agent');
       
       if (agentsData) {
         setAgents(agentsData.map(agent => ({
           id: agent.id,
-          name: agent.full_name || 'Unknown Agent'
+          name: agent.full_name || 'Unknown Agent',
+          email: agent.email,
+          role: agent.role as UserRole
         })));
       }
     };
@@ -63,10 +65,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       fetchAgents();
     }
   }, [userRole]);
-
-  useEffect(() => {
-    fetchComments();
-  }, [ticket.id]);
 
   const fetchComments = async () => {
     try {
@@ -175,19 +173,21 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      const dbUpdates: any = { ...updates };
+      let dbUpdates: any = { ...updates };
       
       if (updates.assignedTo) {
-        dbUpdates.assignee_id = updates.assignedTo.id;
+        const selectedAgent = agents.find(agent => agent.id === updates.assignedTo?.id);
+        if (!selectedAgent) {
+          throw new Error('Selected agent not found');
+        }
+        dbUpdates.assignee_id = selectedAgent.id;
         delete dbUpdates.assignedTo;
       }
 
       const { error } = await supabase
         .from('tickets')
         .update(dbUpdates)
-        .eq('id', ticket.id)
-        .select()
-        .single();
+        .eq('id', ticket.id);
 
       if (error) throw error;
 
@@ -270,7 +270,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
               <label className="block text-sm font-medium mb-1">Assign Agent</label>
               <Select
                 value={ticket.assignedTo?.id || ""}
-                onValueChange={(value) => handleUpdateTicket({ assignedTo: { id: value } })}
+                onValueChange={(value) => {
+                  const selectedAgent = agents.find(agent => agent.id === value);
+                  if (selectedAgent) {
+                    handleUpdateTicket({
+                      assignedTo: {
+                        id: selectedAgent.id,
+                        name: selectedAgent.name,
+                        email: selectedAgent.email,
+                        role: selectedAgent.role
+                      }
+                    });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <UserPlus className="w-4 h-4 mr-2" />
