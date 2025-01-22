@@ -28,6 +28,84 @@ const TicketList = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
 
+  // Fetch tickets function
+  const fetchTickets = async () => {
+    try {
+      const { data: ticketsData, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          customer:profiles!tickets_customer_id_fkey (
+            id,
+            full_name,
+            email,
+            role
+          ),
+          assignedTo:profiles!tickets_assignee_id_fkey (
+            id,
+            full_name,
+            email,
+            role
+          ),
+          company:companies (
+            id,
+            name
+          )
+        `);
+
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load tickets. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formattedTickets = ticketsData.map((ticket: any) => ({
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        status: ticket.status as TicketStatus,
+        priority: ticket.priority,
+        customer: {
+          id: ticket.customer.id,
+          name: ticket.customer.full_name,
+          email: ticket.customer.email,
+          role: ticket.customer.role as UserRole,
+        },
+        ...(ticket.assignedTo && {
+          assignedTo: {
+            id: ticket.assignedTo.id,
+            name: ticket.assignedTo.full_name,
+            email: ticket.assignedTo.email,
+            role: ticket.assignedTo.role as UserRole,
+          },
+        }),
+        ...(ticket.company && {
+          company: {
+            id: ticket.company.id,
+            name: ticket.company.name,
+          },
+        }),
+        created_at: new Date(ticket.created_at).toLocaleString(),
+        updated_at: new Date(ticket.updated_at).toLocaleString(),
+      }));
+
+      setTickets(formattedTickets);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load tickets. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchUserRole = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -47,85 +125,36 @@ const TicketList = () => {
     fetchUserRole();
   }, []);
 
+  // Initial fetch
   useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const { data: ticketsData, error } = await supabase
-          .from('tickets')
-          .select(`
-            *,
-            customer:profiles!tickets_customer_id_fkey (
-              id,
-              full_name,
-              email,
-              role
-            ),
-            assignedTo:profiles!tickets_assignee_id_fkey (
-              id,
-              full_name,
-              email,
-              role
-            ),
-            company:companies (
-              id,
-              name
-            )
-          `);
-
-        if (error) {
-          console.error('Error fetching tickets:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load tickets. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const formattedTickets = ticketsData.map((ticket: any) => ({
-          id: ticket.id,
-          title: ticket.title,
-          description: ticket.description,
-          status: ticket.status as TicketStatus,
-          priority: ticket.priority,
-          customer: {
-            id: ticket.customer.id,
-            name: ticket.customer.full_name,
-            email: ticket.customer.email,
-            role: ticket.customer.role as UserRole,
-          },
-          ...(ticket.assignedTo && {
-            assignedTo: {
-              id: ticket.assignedTo.id,
-              name: ticket.assignedTo.full_name,
-              email: ticket.assignedTo.email,
-              role: ticket.assignedTo.role as UserRole,
-            },
-          }),
-          ...(ticket.company && {
-            company: {
-              id: ticket.company.id,
-              name: ticket.company.name,
-            },
-          }),
-          created_at: new Date(ticket.created_at).toLocaleString(),
-          updated_at: new Date(ticket.updated_at).toLocaleString(),
-        }));
-
-        setTickets(formattedTickets);
-      } catch (error) {
-        console.error('Error:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load tickets. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTickets();
+  }, [toast]);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets'
+        },
+        (payload) => {
+          console.log('Change received!', payload);
+          toast({
+            title: "Ticket Updated",
+            description: "The ticket list has been refreshed.",
+          });
+          fetchTickets(); // Refresh the entire list when any change occurs
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
 
   const filteredTickets = tickets.filter((ticket) => {
