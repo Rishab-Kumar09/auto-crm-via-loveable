@@ -1,17 +1,45 @@
-import { Home, Inbox, Users, Settings, HelpCircle } from "lucide-react";
+import { Home, Inbox, Users, Settings, HelpCircle, PlusCircle, BarChart } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { UserRole } from "@/types/ticket";
 
-const menuItems = [
-  { icon: Home, label: "Dashboard", href: "/" },
-  { icon: Inbox, label: "Tickets", href: "/tickets" },
-  { icon: Users, label: "Customers", href: "/customers" },
-  { icon: Settings, label: "Settings", href: "/settings" },
-  { icon: HelpCircle, label: "Help Center", href: "/help" },
-];
+// Simulated user role - in a real app, this would come from authentication
+const userRole: UserRole = "agent";
+
+const getMenuItems = (role: UserRole) => {
+  const baseItems = [
+    { icon: Home, label: "Dashboard", href: "/" },
+    { icon: Inbox, label: "Tickets", href: "/tickets" },
+  ];
+
+  if (role === "customer") {
+    return [
+      ...baseItems,
+      { icon: PlusCircle, label: "New Ticket", href: "/tickets/new" },
+      { icon: HelpCircle, label: "Help Center", href: "/help" },
+    ];
+  }
+
+  if (role === "agent") {
+    return [
+      ...baseItems,
+      { icon: Users, label: "Customers", href: "/customers" },
+      { icon: HelpCircle, label: "Help Center", href: "/help" },
+    ];
+  }
+
+  // Admin role
+  return [
+    ...baseItems,
+    { icon: Users, label: "Customers", href: "/customers" },
+    { icon: BarChart, label: "Reports", href: "/reports" },
+    { icon: Settings, label: "Settings", href: "/settings" },
+  ];
+};
 
 const Sidebar = () => {
   const { toast } = useToast();
+  const menuItems = getMenuItems(userRole);
 
   const handleNavigation = (item: typeof menuItems[0]) => {
     if (item.href !== "/") {
@@ -26,6 +54,7 @@ const Sidebar = () => {
     <div className="h-screen w-64 bg-white border-r border-zendesk-border flex flex-col">
       <div className="p-4 border-b border-zendesk-border">
         <h1 className="text-xl font-bold text-zendesk-secondary">Help Desk</h1>
+        <p className="text-sm text-zendesk-muted mt-1 capitalize">{userRole} Portal</p>
       </div>
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
