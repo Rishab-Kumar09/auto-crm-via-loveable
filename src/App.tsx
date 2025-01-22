@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Tickets from "./pages/Tickets";
 import React, { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -45,7 +47,27 @@ const App = () => {
                 path="/"
                 element={
                   session ? (
-                    <Index />
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  session ? (
+                    <Dashboard />
+                  ) : (
+                    <Navigate to="/auth" replace />
+                  )
+                }
+              />
+              <Route
+                path="/tickets"
+                element={
+                  session ? (
+                    <Tickets />
                   ) : (
                     <Navigate to="/auth" replace />
                   )
@@ -57,7 +79,7 @@ const App = () => {
                   !session ? (
                     <Auth />
                   ) : (
-                    <Navigate to="/" replace />
+                    <Navigate to="/dashboard" replace />
                   )
                 }
               />

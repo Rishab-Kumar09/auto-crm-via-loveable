@@ -4,17 +4,17 @@ import { useToast } from "@/hooks/use-toast";
 import { UserRole } from "@/types/ticket";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const getMenuItems = (role: UserRole) => {
   const baseItems = [
-    { icon: Home, label: "Dashboard", href: "/" },
+    { icon: Home, label: "Dashboard", href: "/dashboard" },
     { icon: Inbox, label: "Tickets", href: "/tickets" },
   ];
 
   if (role === "customer") {
     return [
       ...baseItems,
-      { icon: PlusCircle, label: "New Ticket", href: "/tickets/new" },
       { icon: HelpCircle, label: "Help Center", href: "/help" },
     ];
   }
@@ -40,6 +40,8 @@ const Sidebar = () => {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -83,7 +85,9 @@ const Sidebar = () => {
   }, [toast]);
 
   const handleNavigation = (item: { label: string; href: string }) => {
-    if (item.href !== "/") {
+    if (item.href === "/dashboard" || item.href === "/tickets") {
+      navigate(item.href);
+    } else {
       toast({
         title: "Navigation",
         description: `${item.label} page is not implemented yet.`,
@@ -111,22 +115,17 @@ const Sidebar = () => {
         <ul className="space-y-2">
           {menuItems.map((item) => (
             <li key={item.label}>
-              <a
-                href={item.href}
-                onClick={(e) => {
-                  if (item.href !== "/") {
-                    e.preventDefault();
-                    handleNavigation(item);
-                  }
-                }}
+              <button
+                onClick={() => handleNavigation(item)}
                 className={cn(
-                  "flex items-center space-x-3 px-4 py-2 rounded-md text-zendesk-secondary",
-                  "hover:bg-zendesk-background transition-colors duration-200"
+                  "flex items-center space-x-3 px-4 py-2 rounded-md text-zendesk-secondary w-full text-left",
+                  "hover:bg-zendesk-background transition-colors duration-200",
+                  location.pathname === item.href && "bg-zendesk-background"
                 )}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
-              </a>
+              </button>
             </li>
           ))}
         </ul>
