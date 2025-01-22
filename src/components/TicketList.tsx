@@ -268,7 +268,7 @@ const TicketList = () => {
            userRole === 'agent' ? "My Assigned Tickets" : "All Tickets"}
         </h2>
         <div className="flex items-center gap-4">
-          {userRole === 'admin' && (
+          {userRole === 'customer' && (
             <CompanySelect
               selectedId={companyFilter}
               onSelect={setCompanyFilter}
