@@ -9,36 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_verification_codes: {
-        Row: {
-          code: string
-          created_at: string | null
-          id: string
-          role: Database["public"]["Enums"]["user_role"]
-          used: boolean | null
-          used_at: string | null
-          used_by: string | null
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          id?: string
-          role: Database["public"]["Enums"]["user_role"]
-          used?: boolean | null
-          used_at?: string | null
-          used_by?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          used?: boolean | null
-          used_at?: string | null
-          used_by?: string | null
-        }
-        Relationships: []
-      }
       chat_messages: {
         Row: {
           content: string
@@ -293,6 +263,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          company_id: string | null
           created_at: string | null
           email: string
           full_name: string | null
@@ -301,6 +272,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           email: string
           full_name?: string | null
@@ -309,6 +281,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           email?: string
           full_name?: string | null
@@ -316,7 +289,15 @@ export type Database = {
           role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tickets: {
         Row: {
