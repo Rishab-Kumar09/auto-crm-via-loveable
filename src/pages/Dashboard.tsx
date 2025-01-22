@@ -210,9 +210,10 @@ const Dashboard = () => {
                     <ChartTooltip />
                     <Bar
                       dataKey="value"
-                      fill="var(--color-open)"
+                      fill={`var(--color-${STATUS_COLORS.open})`}
                       radius={[4, 4, 0, 0]}
-                      fillKey="status"
+                      getStroke={(data) => `var(--color-${data.status})`}
+                      getFill={(data) => `var(--color-${data.status})`}
                     />
                   </BarChart>
                 </ResponsiveContainer>
