@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import CompanySelect from "./CompanySelect";
 
 const TicketForm = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [companyId, setCompanyId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -18,57 +16,33 @@ const TicketForm = () => {
     setIsSubmitting(true);
 
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to create a ticket",
-          variant: "destructive",
-        });
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
 
-      // Create the ticket
-      const { data: ticket, error } = await supabase
+      const { error: ticketError } = await supabase
         .from("tickets")
-        .insert({
-          title,
-          description,
-          customer_id: session.session.user.id,
-          company_id: companyId,
-        })
-        .select(`
-          *,
-          company:companies (
-            name
-          )
-        `)
-        .single();
+        .insert([
+          {
+            title,
+            description,
+            customer_id: user.id,
+          },
+        ]);
 
-      if (error) throw error;
-
-      // Notify admins about the new ticket
-      const { error: notificationError } = await supabase.functions.invoke('notify-ticket', {
-        body: { ticket }
-      });
-
-      if (notificationError) {
-        console.error('Error notifying admins:', notificationError);
-        // Don't throw here, as the ticket was created successfully
-      }
+      if (ticketError) throw ticketError;
 
       toast({
         title: "Success",
         description: "Ticket created successfully",
       });
 
+      // Reset form
       setTitle("");
       setDescription("");
-      setCompanyId(null);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create ticket",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -77,39 +51,25 @@ const TicketForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto p-6 bg-white rounded-lg shadow">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
-          Company
-        </label>
-        <CompanySelect onSelect={setCompanyId} selectedId={companyId} />
-      </div>
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-          Title
-        </label>
         <Input
-          id="title"
+          type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Enter ticket title"
+          placeholder="Ticket Title"
           required
         />
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
         <Textarea
-          id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe your issue"
+          placeholder="Describe your issue..."
           required
-          className="min-h-[100px]"
         />
       </div>
-      <Button type="submit" disabled={isSubmitting} className="w-full">
+      <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Creating..." : "Create Ticket"}
       </Button>
     </form>
