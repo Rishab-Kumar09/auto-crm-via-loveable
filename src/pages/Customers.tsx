@@ -13,35 +13,21 @@ const Customers = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        // First get the admin's company_id
+        // First get the user's profile to check role and company_id
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        const { data: adminProfile, error: profileError } = await supabase
+        const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('company_id')
+          .select('role, company_id')
           .eq('id', user.id)
           .single();
 
         if (profileError) throw profileError;
-        if (!adminProfile?.company_id) throw new Error('No company associated with admin');
 
-        // Fetch customers using two separate queries and combine results
-        const [companyCustomers, ticketCustomers] = await Promise.all([
-          // Get customers directly associated with company
-          supabase
-            .from('profiles')
-            .select(`
-              *,
-              companies (
-                name
-              )
-            `)
-            .eq('role', 'customer')
-            .eq('company_id', adminProfile.company_id),
-
-          // Get customers who have tickets with the company
-          supabase
+        // For admins, fetch all customers
+        if (userProfile?.role === 'admin') {
+          const { data: allCustomers, error: customersError } = await supabase
             .from('profiles')
             .select(`
               *,
@@ -53,19 +39,54 @@ const Customers = () => {
                 company_id
               )
             `)
-            .eq('role', 'customer')
-            .eq('tickets.company_id', adminProfile.company_id)
-        ]);
+            .eq('role', 'customer');
 
-        if (companyCustomers.error) throw companyCustomers.error;
-        if (ticketCustomers.error) throw ticketCustomers.error;
+          if (customersError) throw customersError;
+          setCustomers(allCustomers || []);
+        } else {
+          // For non-admins, fetch only company-related customers
+          if (!userProfile?.company_id) throw new Error('No company associated with user');
 
-        // Combine and deduplicate results
-        const allCustomers = [...(companyCustomers.data || []), ...(ticketCustomers.data || [])];
-        const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
+          const [companyCustomers, ticketCustomers] = await Promise.all([
+            // Get customers directly associated with company
+            supabase
+              .from('profiles')
+              .select(`
+                *,
+                companies (
+                  name
+                )
+              `)
+              .eq('role', 'customer')
+              .eq('company_id', userProfile.company_id),
 
-        console.log('Fetched customers:', uniqueCustomers);
-        setCustomers(uniqueCustomers);
+            // Get customers who have tickets with the company
+            supabase
+              .from('profiles')
+              .select(`
+                *,
+                companies (
+                  name
+                ),
+                tickets!customer_id (
+                  id,
+                  company_id
+                )
+              `)
+              .eq('role', 'customer')
+              .eq('tickets.company_id', userProfile.company_id)
+          ]);
+
+          if (companyCustomers.error) throw companyCustomers.error;
+          if (ticketCustomers.error) throw ticketCustomers.error;
+
+          // Combine and deduplicate results
+          const allCustomers = [...(companyCustomers.data || []), ...(ticketCustomers.data || [])];
+          const uniqueCustomers = Array.from(new Map(allCustomers.map(item => [item.id, item])).values());
+          setCustomers(uniqueCustomers);
+        }
+
+        console.log('Fetched customers:', customers);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
@@ -100,7 +121,7 @@ const Customers = () => {
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  No customers found in your company.
+                  No customers found.
                 </CardContent>
               </Card>
             ) : (
