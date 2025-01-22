@@ -40,7 +40,7 @@ const Customers = () => {
             )
           `)
           .eq('role', 'customer')
-          .or(`company_id.eq.${adminProfile.company_id},tickets.company_id.eq.${adminProfile.company_id}`);
+          .or('company_id.eq.' + adminProfile.company_id + ',tickets.company_id.eq.' + adminProfile.company_id);
 
         if (error) throw error;
 
