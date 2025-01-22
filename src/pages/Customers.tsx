@@ -4,12 +4,10 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import CompanySelect from "@/components/CompanySelect";
 
 const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,23 +24,11 @@ const Customers = () => {
 
         if (profileError) throw profileError;
 
-        // If no company is selected and user is admin, don't fetch any customers
-        if (!selectedCompanyId && userProfile?.role === 'admin') {
-          setCustomers([]);
-          setLoading(false);
-          return;
-        }
-
-        // For regular users, use their company_id, for admins use selected company
-        const companyId = userProfile?.role === 'admin' 
-          ? selectedCompanyId 
-          : userProfile?.company_id;
-
-        if (!companyId) {
+        if (!userProfile?.company_id) {
           throw new Error('No company associated with user');
         }
 
-        // Get customers who have tickets with the company
+        // Get customers who have tickets with the admin/agent's company
         const { data: ticketCustomers, error: ticketError } = await supabase
           .from('profiles')
           .select(`
@@ -56,11 +42,11 @@ const Customers = () => {
             )
           `)
           .eq('role', 'customer')
-          .eq('tickets.company_id', companyId);
+          .eq('tickets.company_id', userProfile.company_id);
 
         if (ticketError) throw ticketError;
 
-        // Filter out customers with no tickets for the selected company
+        // Filter out customers with no tickets for the company
         const validCustomers = ticketCustomers?.filter(customer => 
           customer.tickets && customer.tickets.length > 0
         ) || [];
@@ -80,7 +66,7 @@ const Customers = () => {
     };
 
     fetchCustomers();
-  }, [toast, selectedCompanyId]);
+  }, [toast]);
 
   return (
     <div className="flex h-screen bg-zendesk-background">
@@ -92,26 +78,16 @@ const Customers = () => {
             Company Customers
           </h1>
           <div className="grid gap-4">
-            <CompanySelect 
-              onSelect={setSelectedCompanyId}
-              selectedId={selectedCompanyId}
-            />
             {loading ? (
               <Card>
                 <CardContent className="p-6">
                   Loading customers...
                 </CardContent>
               </Card>
-            ) : !selectedCompanyId ? (
-              <Card>
-                <CardContent className="p-6">
-                  Please select a company to view customers.
-                </CardContent>
-              </Card>
             ) : customers.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
-                  No customers found with tickets in the selected company.
+                  No customers found with tickets in your company.
                 </CardContent>
               </Card>
             ) : (
