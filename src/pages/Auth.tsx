@@ -59,7 +59,7 @@ const Auth = () => {
             },
           },
         });
-        
+
         if (signUpError) {
           if (signUpError.message.includes("User already registered")) {
             toast({
@@ -75,9 +75,10 @@ const Auth = () => {
               variant: "destructive",
             });
           }
+          setIsLoading(false);
           return;
         }
-        
+
         // Create profile with selected role
         const { error: profileError } = await supabase
           .from('profiles')
@@ -96,6 +97,7 @@ const Auth = () => {
             description: "Failed to create user profile",
             variant: "destructive",
           });
+          setIsLoading(false);
           return;
         }
 
@@ -110,7 +112,7 @@ const Auth = () => {
             })
             .eq("code", verificationCode);
         }
-        
+
         toast({
           title: "Success",
           description: "Please check your email to verify your account",
@@ -120,7 +122,7 @@ const Auth = () => {
           email,
           password,
         });
-        
+
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast({
@@ -135,9 +137,10 @@ const Auth = () => {
               variant: "destructive",
             });
           }
+          setIsLoading(false);
           return;
         }
-        
+
         navigate("/");
       }
     } catch (error: any) {
