@@ -1,15 +1,27 @@
 import { Home, Inbox, Users, Settings, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 const menuItems = [
-  { icon: Home, label: "Dashboard", href: "#" },
-  { icon: Inbox, label: "Tickets", href: "#" },
-  { icon: Users, label: "Customers", href: "#" },
-  { icon: Settings, label: "Settings", href: "#" },
-  { icon: HelpCircle, label: "Help Center", href: "#" },
+  { icon: Home, label: "Dashboard", href: "/" },
+  { icon: Inbox, label: "Tickets", href: "/tickets" },
+  { icon: Users, label: "Customers", href: "/customers" },
+  { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: HelpCircle, label: "Help Center", href: "/help" },
 ];
 
 const Sidebar = () => {
+  const { toast } = useToast();
+
+  const handleNavigation = (item: typeof menuItems[0]) => {
+    if (item.href !== "/") {
+      toast({
+        title: "Navigation",
+        description: `${item.label} page is not implemented yet.`,
+      });
+    }
+  };
+
   return (
     <div className="h-screen w-64 bg-white border-r border-zendesk-border flex flex-col">
       <div className="p-4 border-b border-zendesk-border">
@@ -21,6 +33,12 @@ const Sidebar = () => {
             <li key={item.label}>
               <a
                 href={item.href}
+                onClick={(e) => {
+                  if (item.href !== "/") {
+                    e.preventDefault();
+                    handleNavigation(item);
+                  }
+                }}
                 className={cn(
                   "flex items-center space-x-3 px-4 py-2 rounded-md text-zendesk-secondary",
                   "hover:bg-zendesk-background transition-colors duration-200"
