@@ -36,10 +36,14 @@ const App = () => {
         
         if (currentSession) {
           setSession(currentSession);
-          await fetchUserRole(currentSession.user.id);
-        } else {
-          setSession(null);
-          setUserRole(null);
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', currentSession.user.id)
+            .maybeSingle();
+          
+          if (error) throw error;
+          setUserRole(profile?.role || null);
         }
       } catch (error) {
         console.error("Session initialization error:", error);
@@ -58,12 +62,25 @@ const App = () => {
       
       if (session) {
         setSession(session);
-        await fetchUserRole(session.user.id);
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          if (error) throw error;
+          setUserRole(profile?.role || null);
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          setSession(null);
+          setUserRole(null);
+        }
       } else {
         setSession(null);
         setUserRole(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => {
@@ -71,30 +88,6 @@ const App = () => {
     };
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching user role:', error);
-        throw error;
-      }
-
-      setUserRole(profile?.role || null);
-    } catch (error) {
-      console.error('Error:', error);
-      setSession(null);
-      setUserRole(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Show loading state only during initial load
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-zendesk-background">
