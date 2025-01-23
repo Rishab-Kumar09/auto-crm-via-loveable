@@ -66,6 +66,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   }, [userRole]);
 
+  useEffect(() => {
+    fetchComments();
+  }, [ticket.id]);
+
   const fetchComments = async () => {
     try {
       const { data: commentsData, error } = await supabase
