@@ -28,7 +28,6 @@ const App = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize session
     const initializeSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -42,13 +41,15 @@ const App = () => {
             .eq('id', currentSession.user.id)
             .maybeSingle();
           
-          if (error) throw error;
-          setUserRole(profile?.role || null);
+          if (error) {
+            console.error("Profile fetch error:", error);
+            setUserRole(null);
+          } else {
+            setUserRole(profile?.role || null);
+          }
         }
       } catch (error) {
         console.error("Session initialization error:", error);
-        setSession(null);
-        setUserRole(null);
       } finally {
         setLoading(false);
       }
@@ -56,12 +57,11 @@ const App = () => {
 
     initializeSession();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth state change:", _event, session);
+      setSession(session);
       
       if (session) {
-        setSession(session);
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
@@ -69,15 +69,17 @@ const App = () => {
             .eq('id', session.user.id)
             .maybeSingle();
           
-          if (error) throw error;
-          setUserRole(profile?.role || null);
+          if (error) {
+            console.error("Profile fetch error:", error);
+            setUserRole(null);
+          } else {
+            setUserRole(profile?.role || null);
+          }
         } catch (error) {
           console.error("Error fetching user role:", error);
-          setSession(null);
           setUserRole(null);
         }
       } else {
-        setSession(null);
         setUserRole(null);
       }
       setLoading(false);
@@ -110,6 +112,16 @@ const App = () => {
                   <Navigate to="/dashboard" replace />
                 ) : (
                   <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/auth"
+              element={
+                !session ? (
+                  <Auth />
+                ) : (
+                  <Navigate to="/dashboard" replace />
                 )
               }
             />
@@ -160,16 +172,6 @@ const App = () => {
                   <Settings />
                 ) : (
                   <Navigate to="/auth" replace />
-                )
-              }
-            />
-            <Route
-              path="/auth"
-              element={
-                !session ? (
-                  <Auth />
-                ) : (
-                  <Navigate to="/dashboard" replace />
                 )
               }
             />
