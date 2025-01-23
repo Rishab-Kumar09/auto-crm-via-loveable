@@ -177,9 +177,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id)
-        .select()
-        .single();
+        .eq('id', ticket.id);
 
       if (error) {
         console.error("Update error:", {
@@ -198,7 +196,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         description: "Ticket updated successfully.",
       });
 
-      // Refresh the ticket list
       onClose();
     } catch (error: any) {
       console.error("Error updating ticket:", {
