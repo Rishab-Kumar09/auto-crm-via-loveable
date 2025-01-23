@@ -9,61 +9,25 @@ const AgentPerformance = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Get all tickets assigned to the agent through ticket_assignments
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('ticket_assignments')
-        .select(`
-          ticket_id,
-          tickets (
-            status,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('agent_id', user.id);
+      // Get agent's performance metrics
+      const { data: metrics } = await supabase
+        .from('agent_performance')
+        .select('*')
+        .eq('agent_id', user.id)
+        .single();
 
-      if (assignmentsError) throw assignmentsError;
+      if (!metrics) {
+        return {
+          total_tickets: 0,
+          resolved_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0,
+          avg_resolution_time_hours: 0,
+          avg_rating: 0
+        };
+      }
 
-      // Get agent's feedback ratings
-      const { data: feedback } = await supabase
-        .from('feedback')
-        .select('rating')
-        .in('ticket_id', (assignments || []).map(a => a.ticket_id));
-
-      // Calculate metrics
-      const tickets = assignments || [];
-      const totalTickets = tickets.length;
-      const resolvedTickets = tickets.filter(t => t.tickets?.status === 'closed').length;
-      const openTickets = tickets.filter(t => t.tickets?.status === 'open').length;
-      const inProgressTickets = tickets.filter(t => t.tickets?.status === 'in_progress').length;
-
-      // Calculate average resolution time for closed tickets
-      const resolutionTimes = tickets
-        .filter(t => t.tickets?.status === 'closed')
-        .map(t => {
-          const created = new Date(t.tickets?.created_at);
-          const updated = new Date(t.tickets?.updated_at);
-          return (updated.getTime() - created.getTime()) / (1000 * 60 * 60); // hours
-        });
-
-      const avgResolutionTime = resolutionTimes.length > 0
-        ? resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length
-        : 0;
-
-      // Calculate average rating
-      const ratings = (feedback || []).map(f => f.rating).filter(r => r !== null);
-      const avgRating = ratings.length > 0
-        ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-        : 0;
-
-      return {
-        total_tickets: totalTickets,
-        resolved_tickets: resolvedTickets,
-        open_tickets: openTickets,
-        in_progress_tickets: inProgressTickets,
-        avg_resolution_time_hours: avgResolutionTime,
-        avg_rating: avgRating
-      };
+      return metrics;
     },
     refetchInterval: 5000,
   });

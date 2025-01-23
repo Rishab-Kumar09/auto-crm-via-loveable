@@ -50,16 +50,10 @@ const AgentAssignmentSelect = ({
 
   const handleAssignAgent = async (agentId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { error } = await supabase
-        .from('ticket_assignments')
-        .insert({
-          ticket_id: ticketId,
-          agent_id: agentId,
-          assigned_by: user.id
-        });
+        .from('tickets')
+        .update({ assignee_id: agentId })
+        .eq('id', ticketId);
 
       if (error) throw error;
 
@@ -82,9 +76,10 @@ const AgentAssignmentSelect = ({
   const handleRemoveAssignment = async (agentId: string) => {
     try {
       const { error } = await supabase
-        .from('ticket_assignments')
-        .delete()
-        .match({ ticket_id: ticketId, agent_id: agentId });
+        .from('tickets')
+        .update({ assignee_id: null })
+        .eq('id', ticketId)
+        .eq('assignee_id', agentId);
 
       if (error) throw error;
 
