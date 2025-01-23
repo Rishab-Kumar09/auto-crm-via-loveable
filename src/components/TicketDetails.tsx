@@ -159,34 +159,30 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      console.log("Attempting to update ticket:", ticket.id, "with updates:", updates);
-      
-      // First verify the ticket exists
-      const { data: existingTicket, error: fetchError } = await supabase
-        .from('tickets')
-        .select('id')
-        .eq('id', ticket.id)
-        .single();
+      console.log("Starting ticket update process...");
+      console.log("Current user role:", userRole);
+      console.log("Ticket ID:", ticket.id);
+      console.log("Update payload:", updates);
 
-      if (fetchError) {
-        console.error("Error fetching ticket:", fetchError);
-        throw fetchError;
-      }
-
-      if (!existingTicket) {
-        throw new Error("Ticket not found");
-      }
-
-      // Perform the update
-      const { error: updateError } = await supabase
+      // Perform the update directly without verification
+      const { data, error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id);
+        .eq('id', ticket.id)
+        .select()
+        .single();
 
-      if (updateError) {
-        console.error("Error updating ticket:", updateError);
-        throw updateError;
+      if (error) {
+        console.error("Supabase error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
       }
+
+      console.log("Update successful:", data);
 
       toast({
         title: "Success",
@@ -195,7 +191,14 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       onClose();
     } catch (error) {
-      console.error("Error updating ticket:", error);
+      console.error("Full error object:", error);
+      console.error("Error updating ticket:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
       toast({
         title: "Error",
         description: "Failed to update ticket. Please try again.",
