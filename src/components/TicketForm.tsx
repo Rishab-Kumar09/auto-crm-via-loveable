@@ -16,12 +16,19 @@ const TicketForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    console.log("Submitting ticket...");
 
     try {
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user) throw new Error("Not authenticated");
+      if (userError) {
+        console.error("User error:", userError);
+        throw userError;
+      }
+      if (!user) {
+        console.error("No user found");
+        throw new Error("Not authenticated");
+      }
 
       // Get user's profile to ensure they're a customer
       const { data: profile, error: profileError } = await supabase
@@ -30,9 +37,18 @@ const TicketForm = () => {
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileError) throw profileError;
-      if (!profile) throw new Error("Profile not found");
-      if (profile.role !== "customer") throw new Error("Only customers can create tickets");
+      if (profileError) {
+        console.error("Profile error:", profileError);
+        throw profileError;
+      }
+      if (!profile) {
+        console.error("No profile found");
+        throw new Error("Profile not found");
+      }
+      if (profile.role !== "customer") {
+        console.error("User is not a customer");
+        throw new Error("Only customers can create tickets");
+      }
 
       // Create the ticket
       const { error: ticketError } = await supabase
@@ -48,7 +64,7 @@ const TicketForm = () => {
 
       if (ticketError) {
         console.error("Ticket creation error:", ticketError);
-        throw new Error("Failed to create ticket. Please try again.");
+        throw ticketError;
       }
 
       toast({
