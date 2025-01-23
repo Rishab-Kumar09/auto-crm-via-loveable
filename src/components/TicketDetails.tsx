@@ -160,17 +160,32 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
       console.log("Starting ticket update process...");
-      console.log("Current user role:", userRole);
-      console.log("Ticket ID:", ticket.id);
       console.log("Update payload:", updates);
+      console.log("Ticket ID:", ticket.id);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Current user:", user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+      
+      console.log("User profile:", profile);
 
       const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .match({ id: ticket.id });
+        .eq('id', ticket.id);
 
       if (error) {
-        console.error("Supabase error details:", error);
+        console.error("Update error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
 
@@ -183,8 +198,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       onClose();
     } catch (error: any) {
-      console.error("Error updating ticket:", error);
-      console.error("Full error object:", error);
+      console.error("Error updating ticket:", {
+        message: error.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        status: error?.status
+      });
       
       toast({
         title: "Error",
