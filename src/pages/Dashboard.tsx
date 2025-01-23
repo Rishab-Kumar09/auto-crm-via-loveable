@@ -7,9 +7,11 @@ import StatsCards from "@/components/dashboard/StatsCards";
 import TicketChart from "@/components/dashboard/TicketChart";
 import AgentPerformance from "@/components/dashboard/AgentPerformance";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
+  const { toast } = useToast();
 
   const { data: ticketMetrics } = useQuery({
     queryKey: ['ticketMetrics'],
@@ -24,15 +26,29 @@ const Dashboard = () => {
         .single();
 
       if (profile?.role === 'agent') {
-        // Changed from .single() to .maybeSingle() to handle case where no metrics exist
-        const { data } = await supabase
+        // For agents, fetch their specific metrics
+        const { data: metrics, error } = await supabase
           .from('ticket_metrics')
           .select('*')
           .eq('assignee_id', user.id)
-          .maybeSingle();
+          .single();
 
-        // Return default values if no metrics exist
-        return data || {
+        if (error) {
+          console.error('Error fetching metrics:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load ticket metrics",
+            variant: "destructive",
+          });
+          return {
+            total_tickets: 0,
+            resolved_tickets: 0,
+            open_tickets: 0,
+            in_progress_tickets: 0
+          };
+        }
+
+        return metrics || {
           total_tickets: 0,
           resolved_tickets: 0,
           open_tickets: 0,
@@ -45,7 +61,20 @@ const Dashboard = () => {
         .from('tickets')
         .select('status');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load tickets",
+          variant: "destructive",
+        });
+        return {
+          total_tickets: 0,
+          resolved_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0
+        };
+      }
 
       const stats = data.reduce((acc, ticket) => {
         acc.total_tickets++;
@@ -57,6 +86,7 @@ const Dashboard = () => {
 
       return stats;
     },
+    refetchInterval: 5000, // Refresh every 5 seconds to ensure we have latest data
   });
 
   useEffect(() => {
