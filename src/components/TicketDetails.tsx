@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MessageSquare, User, Flag, RefreshCw, Building } from "lucide-react";
+import { Clock, MessageSquare, User, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Ticket, TicketComment, UserRole, TicketStatus, TicketPriority } from "@/types/ticket";
+import { Ticket, TicketComment, UserRole, TicketStatus } from "@/types/ticket";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AgentAssignmentSelect from "./AgentAssignmentSelect";
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -27,51 +26,42 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [assignedAgents, setAssignedAgents] = useState<{ id: string; name: string }[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile) {
-          setUserRole(profile.role as UserRole);
-        }
-      }
-    };
-
     fetchUserRole();
-  }, []);
-
-  useEffect(() => {
     fetchComments();
-    fetchAssignedAgents();
-  }, [ticket.id]);
+    if (userRole === 'admin') {
+      fetchAvailableAgents();
+    }
+  }, [ticket.id, userRole]);
 
-  const fetchAssignedAgents = async () => {
-    const { data: assignments } = await supabase
-      .from('ticket_assignments')
-      .select(`
-        agent_id,
-        agent:profiles!ticket_assignments_agent_id_fkey (
-          id,
-          full_name
-        )
-      `)
-      .eq('ticket_id', ticket.id);
+  const fetchUserRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profile) {
+        setUserRole(profile.role as UserRole);
+      }
+    }
+  };
 
-    if (assignments) {
-      setAssignedAgents(
-        assignments.map(assignment => ({
-          id: assignment.agent.id,
-          name: assignment.agent.full_name || 'Unknown Agent'
-        }))
-      );
+  const fetchAvailableAgents = async () => {
+    const { data: agents } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'agent');
+    
+    if (agents) {
+      setAvailableAgents(agents.map(agent => ({
+        id: agent.id,
+        name: agent.full_name || 'Unknown Agent'
+      })));
     }
   };
 
@@ -121,23 +111,83 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
+  const handleUpdateStatus = async (newStatus: TicketStatus) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ status: newStatus })
+        .eq('id', ticket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Ticket status updated successfully.",
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error updating ticket status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update ticket status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignAgent = async (agentId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // First update the ticket's assignee
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .update({ assignee_id: agentId })
+        .eq('id', ticket.id);
+
+      if (ticketError) throw ticketError;
+
+      // Then create the assignment record
+      const { error: assignmentError } = await supabase
+        .from('ticket_assignments')
+        .insert({
+          ticket_id: ticket.id,
+          agent_id: agentId,
+          assigned_by: user.id
+        });
+
+      if (assignmentError) throw assignmentError;
+
+      toast({
+        title: "Success",
+        description: "Agent assigned successfully.",
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error assigning agent:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign agent. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
       const { error } = await supabase
         .from("comments")
-        .insert([
-          {
-            ticket_id: ticket.id,
-            user_id: user.id,
-            content: newComment,
-          }
-        ]);
+        .insert([{
+          ticket_id: ticket.id,
+          user_id: user.id,
+          content: newComment,
+        }]);
 
       if (error) throw error;
 
@@ -156,55 +206,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       });
     }
   };
-
-  const handleUpdateTicket = async (updates: Partial<Ticket>) => {
-    try {
-      console.log("Starting ticket update process...");
-      console.log("Ticket ID:", ticket.id);
-      console.log("Update payload:", updates);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("Current user:", user);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user?.id)
-        .maybeSingle();
-      
-      console.log("User profile:", profile);
-
-      const { error } = await supabase
-        .from('tickets')
-        .update(updates)
-        .eq('id', ticket.id);
-
-      if (error) {
-        console.error("Update error:", error);
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Ticket updated successfully.",
-      });
-
-      onClose();
-    } catch (error: any) {
-      console.error("Error updating ticket:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update ticket. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCloseTicket = async () => {
-    await handleUpdateTicket({ status: 'closed' });
-  };
-
-  const canManageTicketStatus = userRole === 'admin' || userRole === 'agent';
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
@@ -236,27 +237,15 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {userRole === 'admin' && (
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">Assigned Agents</label>
-              <AgentAssignmentSelect
-                ticketId={ticket.id}
-                currentAssignments={assignedAgents}
-                onAssignmentChange={fetchAssignedAgents}
-              />
-            </div>
-          )}
-
-          {canManageTicketStatus && (
-            <div className="col-span-2">
+        {(userRole === 'admin' || userRole === 'agent') && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium mb-1">Status</label>
               <Select
                 value={ticket.status}
-                onValueChange={(value) => handleUpdateTicket({ status: value as TicketStatus })}
+                onValueChange={(value) => handleUpdateStatus(value as TicketStatus)}
               >
                 <SelectTrigger>
-                  <RefreshCw className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Set status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -266,22 +255,30 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </div>
+
+            {userRole === 'admin' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Assign Agent</label>
+                <Select onValueChange={handleAssignAgent}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAgents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <h3 className="font-medium text-zendesk-secondary">Description</h3>
           <p className="mt-2 text-zendesk-muted">{ticket.description}</p>
-        </div>
-
-        <div>
-          <h3 className="font-medium text-zendesk-secondary mb-2">Status</h3>
-          <Badge
-            variant="secondary"
-            className="bg-yellow-100 text-yellow-800"
-          >
-            {ticket.status.replace("_", " ")}
-          </Badge>
         </div>
 
         <Separator />
