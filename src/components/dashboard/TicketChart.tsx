@@ -49,9 +49,9 @@ const TicketChart = ({ data }: TicketChartProps) => {
                 dataKey="value"
                 radius={[4, 4, 0, 0]}
               >
-                {chartData.map((entry) => (
+                {chartData.map((entry, index) => (
                   <Cell 
-                    key={entry.name}
+                    key={`cell-${index}`}
                     fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
                   />
                 ))}
