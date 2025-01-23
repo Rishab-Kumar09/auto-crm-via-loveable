@@ -37,7 +37,7 @@ const TicketList = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, company_id')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -64,24 +64,46 @@ const TicketList = () => {
           company:companies (
             id,
             name
+          ),
+          ticket_assignments!inner (
+            agent_id
           )
         `);
 
-      // For agents, only fetch assigned tickets
+      // For agents, fetch tickets where they are either directly assigned or in ticket_assignments
       if (profile?.role === 'agent') {
-        query = query.eq('assignee_id', user.id);
+        query = query
+          .eq('company_id', profile.company_id)
+          .or(`assignee_id.eq.${user.id},ticket_assignments.agent_id.eq.${user.id}`);
+      }
+
+      // For customers, only fetch their own tickets
+      if (profile?.role === 'customer') {
+        query = query.eq('customer_id', user.id);
+      }
+
+      // For admins, only fetch tickets from their company
+      if (profile?.role === 'admin') {
+        query = query.eq('company_id', profile.company_id);
       }
 
       const { data: ticketsData, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Fetch error:', error);
+        throw error;
+      }
 
       if (!ticketsData) {
         setTickets([]);
         return;
       }
 
-      const formattedTickets = ticketsData.map((ticket: any) => ({
+      // Remove duplicate tickets (due to multiple assignments)
+      const uniqueTickets = Array.from(new Set(ticketsData.map(t => t.id)))
+        .map(id => ticketsData.find(t => t.id === id));
+
+      const formattedTickets = uniqueTickets.map((ticket: any) => ({
         id: ticket.id,
         title: ticket.title,
         description: ticket.description,
@@ -283,12 +305,16 @@ const TicketList = () => {
         </div>
       </div>
       <div className="divide-y divide-zendesk-border">
-        {filteredTickets.length > 0 ? (
+        {loading ? (
+          <div className="p-8 text-center text-zendesk-muted">
+            Loading tickets...
+          </div>
+        ) : filteredTickets.length > 0 ? (
           filteredTickets.map((ticket) => (
             <div
               key={ticket.id}
               className="p-4 hover:bg-zendesk-background transition-colors cursor-pointer"
-              onClick={() => handleTicketClick(ticket)}
+              onClick={() => setSelectedTicket(ticket)}
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
@@ -340,6 +366,12 @@ const TicketList = () => {
           </div>
         )}
       </div>
+      {selectedTicket && (
+        <TicketDetails
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+        />
+      )}
     </div>
   );
 };
