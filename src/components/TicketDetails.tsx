@@ -174,7 +174,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       
       console.log("User profile:", profile);
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id);
@@ -189,7 +189,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         throw error;
       }
 
-      console.log("Update successful");
+      console.log("Update successful", data);
       
       toast({
         title: "Success",
