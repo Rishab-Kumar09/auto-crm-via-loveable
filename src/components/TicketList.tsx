@@ -37,7 +37,7 @@ const TicketList = () => {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, company_id')
+        .select('role')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -45,7 +45,7 @@ const TicketList = () => {
         setUserRole(profile.role as UserRole);
       }
 
-      let query = supabase
+      const query = supabase
         .from('tickets')
         .select(`
           *,
@@ -64,46 +64,19 @@ const TicketList = () => {
           company:companies (
             id,
             name
-          ),
-          ticket_assignments!inner (
-            agent_id
           )
         `);
 
-      // For agents, fetch tickets where they are either directly assigned or in ticket_assignments
+      // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
-        query = query
-          .eq('company_id', profile.company_id)
-          .or(`assignee_id.eq.${user.id},ticket_assignments.agent_id.eq.${user.id}`);
-      }
-
-      // For customers, only fetch their own tickets
-      if (profile?.role === 'customer') {
-        query = query.eq('customer_id', user.id);
-      }
-
-      // For admins, only fetch tickets from their company
-      if (profile?.role === 'admin') {
-        query = query.eq('company_id', profile.company_id);
+        query.eq('assignee_id', user.id);
       }
 
       const { data: ticketsData, error } = await query;
 
-      if (error) {
-        console.error('Fetch error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (!ticketsData) {
-        setTickets([]);
-        return;
-      }
-
-      // Remove duplicate tickets (due to multiple assignments)
-      const uniqueTickets = Array.from(new Set(ticketsData.map(t => t.id)))
-        .map(id => ticketsData.find(t => t.id === id));
-
-      const formattedTickets = uniqueTickets.map((ticket: any) => ({
+      const formattedTickets = ticketsData.map((ticket: any) => ({
         id: ticket.id,
         title: ticket.title,
         description: ticket.description,
@@ -158,7 +131,7 @@ const TicketList = () => {
           .from('profiles')
           .select('role')
           .eq('id', user.id)
-          .maybeSingle();
+          .single();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
@@ -305,16 +278,12 @@ const TicketList = () => {
         </div>
       </div>
       <div className="divide-y divide-zendesk-border">
-        {loading ? (
-          <div className="p-8 text-center text-zendesk-muted">
-            Loading tickets...
-          </div>
-        ) : filteredTickets.length > 0 ? (
+        {filteredTickets.length > 0 ? (
           filteredTickets.map((ticket) => (
             <div
               key={ticket.id}
               className="p-4 hover:bg-zendesk-background transition-colors cursor-pointer"
-              onClick={() => setSelectedTicket(ticket)}
+              onClick={() => handleTicketClick(ticket)}
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
@@ -366,12 +335,6 @@ const TicketList = () => {
           </div>
         )}
       </div>
-      {selectedTicket && (
-        <TicketDetails
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-        />
-      )}
     </div>
   );
 };
