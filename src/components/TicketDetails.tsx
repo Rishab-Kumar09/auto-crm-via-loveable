@@ -28,7 +28,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [assignedAgents, setAssignedAgents] = useState<{ id: string; name: string }[]>([]);
-  const [currentStatus, setCurrentStatus] = useState<TicketStatus>(ticket.status);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -158,31 +157,65 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
-  const handleUpdateTicket = async (newStatus: TicketStatus) => {
+  const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
+      console.log("Starting ticket update process...");
+      console.log("Update payload:", updates);
+      console.log("Ticket ID:", ticket.id);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("Current user:", user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+      
+      console.log("User profile:", profile);
+
       const { error } = await supabase
         .from('tickets')
-        .update({ status: newStatus })
+        .update(updates)
         .eq('id', ticket.id);
 
       if (error) {
-        console.error("Update error:", error);
+        console.error("Update error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
 
-      setCurrentStatus(newStatus);
+      console.log("Update successful");
+      
       toast({
         title: "Success",
-        description: "Ticket status updated successfully.",
+        description: "Ticket updated successfully.",
       });
+
+      onClose();
     } catch (error: any) {
-      console.error("Error updating ticket:", error);
+      console.error("Error updating ticket:", {
+        message: error.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        status: error?.status
+      });
+      
       toast({
         title: "Error",
-        description: "Failed to update ticket status. Please try again.",
+        description: "Failed to update ticket. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleCloseTicket = async () => {
+    await handleUpdateTicket({ status: 'closed' });
   };
 
   const canManageTicketStatus = userRole === 'admin' || userRole === 'agent';
@@ -233,10 +266,11 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-1">Status</label>
               <Select
-                value={currentStatus}
-                onValueChange={(value: TicketStatus) => handleUpdateTicket(value)}
+                value={ticket.status}
+                onValueChange={(value) => handleUpdateTicket({ status: value as TicketStatus })}
               >
                 <SelectTrigger>
+                  <RefreshCw className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Set status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -260,7 +294,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
             variant="secondary"
             className="bg-yellow-100 text-yellow-800"
           >
-            {currentStatus.replace("_", " ")}
+            {ticket.status.replace("_", " ")}
           </Badge>
         </div>
 
