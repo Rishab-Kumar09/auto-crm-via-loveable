@@ -27,7 +27,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>("customer");
-  const [assignedAgents, setAssignedAgents] = useState<{ id: string; name: string }[]>([]);
+  const [assignedAgent, setAssignedAgent] = useState<{ id: string; name: string } | null>(null);
   const [currentStatus, setCurrentStatus] = useState<TicketStatus>(ticket.status);
   const [currentPriority, setCurrentPriority] = useState<TicketPriority>(ticket.priority);
 
@@ -52,28 +52,25 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   useEffect(() => {
     fetchComments();
-    fetchAssignedAgents();
+    fetchAssignedAgent();
   }, [ticket.id]);
 
-  const fetchAssignedAgents = async () => {
-    const { data: assignments } = await supabase
-      .from('ticket_assignments')
-      .select(`
-        agent_id,
-        agent:profiles!ticket_assignments_agent_id_fkey (
-          id,
-          full_name
-        )
-      `)
-      .eq('ticket_id', ticket.id);
+  const fetchAssignedAgent = async () => {
+    if (ticket.assignee_id) {
+      const { data: agent } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('id', ticket.assignee_id)
+        .single();
 
-    if (assignments) {
-      setAssignedAgents(
-        assignments.map(assignment => ({
-          id: assignment.agent.id,
-          name: assignment.agent.full_name || 'Unknown Agent'
-        }))
-      );
+      if (agent) {
+        setAssignedAgent({
+          id: agent.id,
+          name: agent.full_name || 'Unknown Agent'
+        });
+      }
+    } else {
+      setAssignedAgent(null);
     }
   };
 
@@ -248,11 +245,13 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         <div className="grid grid-cols-2 gap-4">
           {userRole === 'admin' && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">Assigned Agents</label>
+              <label className="block text-sm font-medium mb-1">Assigned Agent</label>
               <AgentAssignmentSelect
                 ticketId={ticket.id}
-                currentAssignments={assignedAgents}
-                onAssignmentChange={fetchAssignedAgents}
+                currentAssignee={assignedAgent}
+                onAssignmentChange={() => {
+                  fetchAssignedAgent();
+                }}
               />
             </div>
           )}

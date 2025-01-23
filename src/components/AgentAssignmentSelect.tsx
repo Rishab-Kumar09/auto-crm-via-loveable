@@ -18,13 +18,13 @@ interface Agent {
 
 interface AgentAssignmentSelectProps {
   ticketId: string;
-  currentAssignments: { id: string; name: string }[];
+  currentAssignee: { id: string; name: string } | null;
   onAssignmentChange: () => void;
 }
 
 const AgentAssignmentSelect = ({ 
   ticketId, 
-  currentAssignments,
+  currentAssignee,
   onAssignmentChange 
 }: AgentAssignmentSelectProps) => {
   const { toast } = useToast();
@@ -53,15 +53,26 @@ const AgentAssignmentSelect = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
+      // First update the ticket's assignee
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .update({ assignee_id: agentId })
+        .eq('id', ticketId);
+
+      if (ticketError) throw ticketError;
+
+      // Then create the assignment record
+      const { error: assignmentError } = await supabase
         .from('ticket_assignments')
-        .insert({
+        .upsert({
           ticket_id: ticketId,
           agent_id: agentId,
           assigned_by: user.id
+        }, {
+          onConflict: 'ticket_id'
         });
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Success",
@@ -79,14 +90,23 @@ const AgentAssignmentSelect = ({
     }
   };
 
-  const handleRemoveAssignment = async (agentId: string) => {
+  const handleRemoveAssignment = async () => {
     try {
-      const { error } = await supabase
+      // First update the ticket's assignee
+      const { error: ticketError } = await supabase
+        .from('tickets')
+        .update({ assignee_id: null })
+        .eq('id', ticketId);
+
+      if (ticketError) throw ticketError;
+
+      // Then remove the assignment record
+      const { error: assignmentError } = await supabase
         .from('ticket_assignments')
         .delete()
-        .match({ ticket_id: ticketId, agent_id: agentId });
+        .eq('ticket_id', ticketId);
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Success",
@@ -106,26 +126,24 @@ const AgentAssignmentSelect = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {currentAssignments.map((assignment) => (
-          <Badge
-            key={assignment.id}
-            variant="secondary"
-            className="flex items-center gap-2"
+      {currentAssignee && (
+        <Badge
+          variant="secondary"
+          className="flex items-center gap-2"
+        >
+          {currentAssignee.name}
+          <button
+            onClick={handleRemoveAssignment}
+            className="ml-1 hover:text-red-500"
           >
-            {assignment.name}
-            <button
-              onClick={() => handleRemoveAssignment(assignment.id)}
-              className="ml-1 hover:text-red-500"
-            >
-              ×
-            </button>
-          </Badge>
-        ))}
-      </div>
+            ×
+          </button>
+        </Badge>
+      )}
       
       <Select
         onValueChange={handleAssignAgent}
+        value={currentAssignee?.id || ""}
       >
         <SelectTrigger>
           <UserPlus className="w-4 h-4 mr-2" />
@@ -133,7 +151,7 @@ const AgentAssignmentSelect = ({
         </SelectTrigger>
         <SelectContent>
           {agents
-            .filter(agent => !currentAssignments.some(assignment => assignment.id === agent.id))
+            .filter(agent => agent.id !== currentAssignee?.id)
             .map((agent) => (
               <SelectItem key={agent.id} value={agent.id}>
                 {agent.name}
