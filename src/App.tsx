@@ -29,26 +29,38 @@ const App = () => {
 
   useEffect(() => {
     // Initialize session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session);
-      setSession(session);
-      if (session) {
-        fetchUserRole(session.user.id);
-      } else {
+    const initializeSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", currentSession);
+        
+        if (currentSession) {
+          setSession(currentSession);
+          await fetchUserRole(currentSession.user.id);
+        } else {
+          setSession(null);
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error("Session initialization error:", error);
+        setSession(null);
+        setUserRole(null);
+      } finally {
         setLoading(false);
       }
-    });
+    };
+
+    initializeSession();
 
     // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth state change:", _event, session);
-      setSession(session);
       
       if (session) {
+        setSession(session);
         await fetchUserRole(session.user.id);
       } else {
+        setSession(null);
         setUserRole(null);
         setLoading(false);
       }
@@ -65,20 +77,16 @@ const App = () => {
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching user role:', error);
-        // If there's an error fetching the profile, sign out the user
-        await supabase.auth.signOut();
-        setSession(null);
-        setUserRole(null);
-      } else {
-        setUserRole(profile?.role || null);
+        throw error;
       }
+
+      setUserRole(profile?.role || null);
     } catch (error) {
       console.error('Error:', error);
-      await supabase.auth.signOut();
       setSession(null);
       setUserRole(null);
     } finally {
@@ -86,8 +94,13 @@ const App = () => {
     }
   };
 
+  // Show loading state only during initial load
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center bg-zendesk-background">
+        <div className="text-lg text-zendesk-secondary">Loading application...</div>
+      </div>
+    );
   }
 
   return (
