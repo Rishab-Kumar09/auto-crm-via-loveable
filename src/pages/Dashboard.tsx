@@ -34,26 +34,38 @@ const Dashboard = () => {
         .maybeSingle();
 
       if (profile?.role === 'agent') {
-        const { data: metrics, error } = await supabase
-          .from('ticket_metrics')
-          .select('*')
-          .eq('assignee_id', user.id)
-          .maybeSingle();
+        // Get all tickets assigned to the agent through ticket_assignments
+        const { data: assignments, error } = await supabase
+          .from('ticket_assignments')
+          .select(`
+            ticket_id,
+            tickets (
+              status
+            )
+          `)
+          .eq('agent_id', user.id);
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching metrics:', error);
+        if (error) {
+          console.error('Error fetching assignments:', error);
           toast({
             title: "Error",
             description: "Failed to load ticket metrics",
             variant: "destructive",
           });
+          return {
+            total_tickets: 0,
+            resolved_tickets: 0,
+            open_tickets: 0,
+            in_progress_tickets: 0
+          };
         }
 
-        return metrics || {
-          total_tickets: 0,
-          resolved_tickets: 0,
-          open_tickets: 0,
-          in_progress_tickets: 0
+        const tickets = assignments || [];
+        return {
+          total_tickets: tickets.length,
+          resolved_tickets: tickets.filter(t => t.tickets?.status === 'closed').length,
+          open_tickets: tickets.filter(t => t.tickets?.status === 'open').length,
+          in_progress_tickets: tickets.filter(t => t.tickets?.status === 'in_progress').length
         };
       }
 
@@ -87,7 +99,7 @@ const Dashboard = () => {
 
       return stats;
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   });
 
   useEffect(() => {

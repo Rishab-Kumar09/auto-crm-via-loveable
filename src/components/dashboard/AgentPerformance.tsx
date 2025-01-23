@@ -9,22 +9,63 @@ const AgentPerformance = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('agent_performance')
-        .select('*')
-        .eq('agent_id', user.id)
-        .maybeSingle();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      return data || {
-        total_tickets: 0,
-        resolved_tickets: 0,
-        avg_resolution_time_hours: 0,
-        avg_rating: 0
+      // Get all tickets assigned to the agent through ticket_assignments
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('ticket_assignments')
+        .select(`
+          ticket_id,
+          tickets (
+            status,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('agent_id', user.id);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Get agent's feedback ratings
+      const { data: feedback } = await supabase
+        .from('feedback')
+        .select('rating')
+        .in('ticket_id', (assignments || []).map(a => a.ticket_id));
+
+      // Calculate metrics
+      const tickets = assignments || [];
+      const totalTickets = tickets.length;
+      const resolvedTickets = tickets.filter(t => t.tickets?.status === 'closed').length;
+      const openTickets = tickets.filter(t => t.tickets?.status === 'open').length;
+      const inProgressTickets = tickets.filter(t => t.tickets?.status === 'in_progress').length;
+
+      // Calculate average resolution time for closed tickets
+      const resolutionTimes = tickets
+        .filter(t => t.tickets?.status === 'closed')
+        .map(t => {
+          const created = new Date(t.tickets?.created_at);
+          const updated = new Date(t.tickets?.updated_at);
+          return (updated.getTime() - created.getTime()) / (1000 * 60 * 60); // hours
+        });
+
+      const avgResolutionTime = resolutionTimes.length > 0
+        ? resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length
+        : 0;
+
+      // Calculate average rating
+      const ratings = (feedback || []).map(f => f.rating).filter(r => r !== null);
+      const avgRating = ratings.length > 0
+        ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+        : 0;
+
+      return {
+        total_tickets: totalTickets,
+        resolved_tickets: resolvedTickets,
+        open_tickets: openTickets,
+        in_progress_tickets: inProgressTickets,
+        avg_resolution_time_hours: avgResolutionTime,
+        avg_rating: avgRating
       };
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   });
 
   if (!performance) return null;
