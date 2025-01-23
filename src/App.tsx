@@ -28,54 +28,40 @@ const App = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("Starting session initialization...");
-    
+    // Initialize session
     const initializeSession = async () => {
       try {
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        console.log("Session check result:", { currentSession, sessionError });
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", currentSession);
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setSession(null);
-          setUserRole(null);
-          return;
-        }
-
         if (currentSession) {
           setSession(currentSession);
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', currentSession.user.id)
             .maybeSingle();
           
-          if (profileError) {
-            console.error("Profile fetch error:", profileError);
-            throw profileError;
+          if (error) {
+            console.error("Error fetching profile:", error);
+            throw error;
           }
-          
-          console.log("Profile data:", profile);
           setUserRole(profile?.role || null);
-        } else {
-          console.log("No active session found");
-          setSession(null);
-          setUserRole(null);
         }
       } catch (error) {
         console.error("Session initialization error:", error);
         setSession(null);
         setUserRole(null);
       } finally {
-        console.log("Setting loading to false");
         setLoading(false);
       }
     };
 
     initializeSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change:", event, session);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth state change:", _event, session);
       
       if (session) {
         setSession(session);
@@ -90,8 +76,6 @@ const App = () => {
             console.error("Error fetching user role:", error);
             throw error;
           }
-          
-          console.log("Updated profile data:", profile);
           setUserRole(profile?.role || null);
         } catch (error) {
           console.error("Error in auth state change:", error);
@@ -99,7 +83,6 @@ const App = () => {
           setUserRole(null);
         }
       } else {
-        console.log("Auth state change: No session");
         setSession(null);
         setUserRole(null);
       }
