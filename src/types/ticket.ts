@@ -21,7 +21,7 @@ export interface Ticket {
   title: string;
   description: string | null;
   customer: User;
-  assignedTo?: User;
+  assignee_id: string | null;  // Added this field
   company?: Company;
   status: TicketStatus;
   priority: TicketPriority;

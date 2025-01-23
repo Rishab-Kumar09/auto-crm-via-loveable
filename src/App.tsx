@@ -21,6 +21,7 @@ const App = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
+    // Initialize the session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -30,12 +31,13 @@ const App = () => {
       }
     });
 
+    // Set up the auth state listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        fetchUserRole(session.user.id);
+        await fetchUserRole(session.user.id);
       } else {
         setUserRole(null);
         setLoading(false);
@@ -46,14 +48,20 @@ const App = () => {
   }, []);
 
   const fetchUserRole = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    
-    setUserRole(profile?.role || null);
-    setLoading(false);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      setUserRole(profile?.role || null);
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -61,88 +69,86 @@ const App = () => {
   }
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  session ? (
-                    <Navigate to="/dashboard" replace />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  session ? (
-                    <Dashboard />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/tickets"
-                element={
-                  session ? (
-                    <Tickets />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/customers"
-                element={
-                  session ? (
-                    <Customers />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/agents"
-                element={
-                  session && userRole === 'admin' ? (
-                    <Agents />
-                  ) : (
-                    <Navigate to="/dashboard" replace />
-                  )
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  session ? (
-                    <Settings />
-                  ) : (
-                    <Navigate to="/auth" replace />
-                  )
-                }
-              />
-              <Route
-                path="/auth"
-                element={
-                  !session ? (
-                    <Auth />
-                  ) : (
-                    <Navigate to="/dashboard" replace />
-                  )
-                }
-              />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                session ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                session ? (
+                  <Dashboard />
+                ) : (
+                  <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/tickets"
+              element={
+                session ? (
+                  <Tickets />
+                ) : (
+                  <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                session ? (
+                  <Customers />
+                ) : (
+                  <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/agents"
+              element={
+                session && userRole === 'admin' ? (
+                  <Agents />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                session ? (
+                  <Settings />
+                ) : (
+                  <Navigate to="/auth" replace />
+                )
+              }
+            />
+            <Route
+              path="/auth"
+              element={
+                !session ? (
+                  <Auth />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
