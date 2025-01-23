@@ -119,7 +119,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .match({ id: ticket.id });
+        .filter('id', 'eq', ticket.id);
 
       if (error) throw error;
 
@@ -150,7 +150,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           assignee_id: agentId,
           updated_at: new Date().toISOString()
         })
-        .match({ id: ticket.id });
+        .filter('id', 'eq', ticket.id);
 
       if (ticketError) throw ticketError;
 
