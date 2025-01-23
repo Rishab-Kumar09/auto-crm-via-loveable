@@ -170,23 +170,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('profiles')
         .select('role')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
       
       console.log("User profile:", profile);
 
       const { data, error } = await supabase
         .from('tickets')
         .update(updates)
-        .match({ id: ticket.id })
-        .select();
+        .eq('id', ticket.id)
+        .select()
+        .single();
 
       if (error) {
-        console.error("Update error:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
+        console.error("Update error:", error);
         throw error;
       }
 
@@ -199,13 +195,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       onClose();
     } catch (error: any) {
-      console.error("Error updating ticket:", {
-        message: error.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code,
-        status: error?.status
-      });
+      console.error("Error updating ticket:", error);
       
       toast({
         title: "Error",
