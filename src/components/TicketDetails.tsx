@@ -115,7 +115,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     try {
       const { error } = await supabase
         .from('tickets')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
@@ -146,7 +146,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       // Update the ticket's assignee
       const { error: ticketError } = await supabase
         .from('tickets')
-        .update({ 
+        .update({
           assignee_id: agentId,
           updated_at: new Date().toISOString()
         })
