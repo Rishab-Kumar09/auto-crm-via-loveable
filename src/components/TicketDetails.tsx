@@ -178,8 +178,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error("Update error:", error);
