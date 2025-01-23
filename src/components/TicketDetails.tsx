@@ -115,7 +115,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     try {
       const { error } = await supabase
         .from('tickets')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', ticket.id);
 
       if (error) throw error;
@@ -140,15 +143,18 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // First update the ticket's assignee
+      // Update the ticket's assignee
       const { error: ticketError } = await supabase
         .from('tickets')
-        .update({ assignee_id: agentId })
+        .update({ 
+          assignee_id: agentId,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', ticket.id);
 
       if (ticketError) throw ticketError;
 
-      // Then create the assignment record
+      // Create the assignment record
       const { error: assignmentError } = await supabase
         .from('ticket_assignments')
         .insert({
@@ -183,11 +189,11 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
       const { error } = await supabase
         .from("comments")
-        .insert([{
+        .insert({
           ticket_id: ticket.id,
           user_id: user.id,
           content: newComment,
-        }]);
+        });
 
       if (error) throw error;
 
