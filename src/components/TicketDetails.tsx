@@ -167,34 +167,24 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id);
+        .match({ id: ticket.id });
 
       if (error) {
-        console.error("Supabase error details:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
+        console.error("Supabase error details:", error);
         throw error;
       }
 
       console.log("Update successful");
-
+      
       toast({
         title: "Success",
         description: "Ticket updated successfully.",
       });
 
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error updating ticket:", error);
       console.error("Full error object:", error);
-      console.error("Error updating ticket:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
       
       toast({
         title: "Error",
