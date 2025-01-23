@@ -16,56 +16,23 @@ const TicketForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    console.log("Submitting ticket...");
 
     try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error("User error:", userError);
-        throw userError;
-      }
-      if (!user) {
-        console.error("No user found");
-        throw new Error("Not authenticated");
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
 
-      // Get user's profile to ensure they're a customer
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Profile error:", profileError);
-        throw profileError;
-      }
-      if (!profile) {
-        console.error("No profile found");
-        throw new Error("Profile not found");
-      }
-      if (profile.role !== "customer") {
-        console.error("User is not a customer");
-        throw new Error("Only customers can create tickets");
-      }
-
-      // Create the ticket
       const { error: ticketError } = await supabase
         .from("tickets")
-        .insert({
-          title,
-          description,
-          customer_id: user.id,
-          company_id: companyId,
-          status: "open",
-          priority: "medium"
-        });
+        .insert([
+          {
+            title,
+            description,
+            customer_id: user.id,
+            company_id: companyId,
+          },
+        ]);
 
-      if (ticketError) {
-        console.error("Ticket creation error:", ticketError);
-        throw ticketError;
-      }
+      if (ticketError) throw ticketError;
 
       toast({
         title: "Success",
@@ -77,10 +44,9 @@ const TicketForm = () => {
       setDescription("");
       setCompanyId(null);
     } catch (error: any) {
-      console.error("Error creating ticket:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create ticket",
+        description: error.message,
         variant: "destructive",
       });
     } finally {

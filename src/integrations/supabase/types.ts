@@ -205,6 +205,7 @@ export type Database = {
       }
       feedback: {
         Row: {
+          article_id: string | null
           comment: string | null
           created_at: string | null
           id: string
@@ -213,6 +214,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          article_id?: string | null
           comment?: string | null
           created_at?: string | null
           id?: string
@@ -221,6 +223,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          article_id?: string | null
           comment?: string | null
           created_at?: string | null
           id?: string
@@ -229,6 +232,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feedback_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base_articles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feedback_ticket_id_fkey"
             columns: ["ticket_id"]
@@ -376,7 +386,7 @@ export type Database = {
           {
             foreignKeyName: "ticket_assignments_ticket_id_fkey"
             columns: ["ticket_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
@@ -431,8 +441,8 @@ export type Database = {
           customer_id: string
           description: string | null
           id: string
-          priority: Database["public"]["Enums"]["ticket_priority"]
-          status: Database["public"]["Enums"]["ticket_status"]
+          priority: Database["public"]["Enums"]["ticket_priority"] | null
+          status: Database["public"]["Enums"]["ticket_status"] | null
           title: string
           updated_at: string | null
         }
@@ -443,8 +453,8 @@ export type Database = {
           customer_id: string
           description?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["ticket_priority"]
-          status?: Database["public"]["Enums"]["ticket_status"]
+          priority?: Database["public"]["Enums"]["ticket_priority"] | null
+          status?: Database["public"]["Enums"]["ticket_status"] | null
           title: string
           updated_at?: string | null
         }
@@ -455,8 +465,8 @@ export type Database = {
           customer_id?: string
           description?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["ticket_priority"]
-          status?: Database["public"]["Enums"]["ticket_status"]
+          priority?: Database["public"]["Enums"]["ticket_priority"] | null
+          status?: Database["public"]["Enums"]["ticket_status"] | null
           title?: string
           updated_at?: string | null
         }
@@ -496,7 +506,7 @@ export type Database = {
     }
     Enums: {
       ticket_priority: "low" | "medium" | "high" | "critical"
-      ticket_status: "open" | "in_progress" | "closed"
+      ticket_status: "open" | "in_progress" | "resolved" | "closed"
       user_role: "customer" | "agent" | "admin"
     }
     CompositeTypes: {
