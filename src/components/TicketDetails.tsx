@@ -160,8 +160,8 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
       console.log("Starting ticket update process...");
-      console.log("Update payload:", updates);
       console.log("Ticket ID:", ticket.id);
+      console.log("Update payload:", updates);
 
       const { data: { user } } = await supabase.auth.getUser();
       console.log("Current user:", user);
@@ -174,19 +174,16 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       
       console.log("User profile:", profile);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id)
-        .select();
+        .eq('id', ticket.id);
 
       if (error) {
         console.error("Update error:", error);
         throw error;
       }
 
-      console.log("Update successful", data);
-      
       toast({
         title: "Success",
         description: "Ticket updated successfully.",
@@ -195,7 +192,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       onClose();
     } catch (error: any) {
       console.error("Error updating ticket:", error);
-      
       toast({
         title: "Error",
         description: "Failed to update ticket. Please try again.",
