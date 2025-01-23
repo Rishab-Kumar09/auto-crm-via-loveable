@@ -24,14 +24,20 @@ const Dashboard = () => {
         .single();
 
       if (profile?.role === 'agent') {
-        const { data, error } = await supabase
+        // Changed from .single() to .maybeSingle() to handle case where no metrics exist
+        const { data } = await supabase
           .from('ticket_metrics')
           .select('*')
           .eq('assignee_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-        return data;
+        // Return default values if no metrics exist
+        return data || {
+          total_tickets: 0,
+          resolved_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0
+        };
       }
 
       // For admins and customers, get overall stats
