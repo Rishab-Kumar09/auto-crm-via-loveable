@@ -22,12 +22,23 @@ const Header = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    try {
+      // Use local scope to avoid JWT issues
+      await supabase.auth.signOut({ scope: 'local' });
+      navigate("/auth");
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      // Still redirect to auth page even if there's an error
+      navigate("/auth");
+      toast({
+        title: "Session ended",
+        description: "Your session has ended. Please sign in again.",
+      });
+    }
   };
 
   return (
