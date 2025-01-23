@@ -42,7 +42,10 @@ const App = () => {
             .eq('id', currentSession.user.id)
             .maybeSingle();
           
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching profile:", error);
+            throw error;
+          }
           setUserRole(profile?.role || null);
         }
       } catch (error) {
@@ -69,10 +72,13 @@ const App = () => {
             .eq('id', session.user.id)
             .maybeSingle();
           
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching user role:", error);
+            throw error;
+          }
           setUserRole(profile?.role || null);
         } catch (error) {
-          console.error("Error fetching user role:", error);
+          console.error("Error in auth state change:", error);
           setSession(null);
           setUserRole(null);
         }
