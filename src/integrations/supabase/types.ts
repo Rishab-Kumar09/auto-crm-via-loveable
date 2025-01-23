@@ -142,25 +142,25 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
-          ticket_id: string | null
+          ticket_id: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
-          ticket_id?: string | null
+          ticket_id: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
-          ticket_id?: string | null
+          ticket_id?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -229,13 +229,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "feedback_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "feedback_user_id_fkey"
             columns: ["user_id"]
@@ -336,93 +329,6 @@ export type Database = {
           },
         ]
       }
-      ticket_assignments: {
-        Row: {
-          agent_id: string
-          assigned_at: string | null
-          assigned_by: string
-          id: string
-          ticket_id: string
-        }
-        Insert: {
-          agent_id: string
-          assigned_at?: string | null
-          assigned_by: string
-          id?: string
-          ticket_id: string
-        }
-        Update: {
-          agent_id?: string
-          assigned_at?: string | null
-          assigned_by?: string
-          id?: string
-          ticket_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_assignments_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ticket_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ticket_assignments_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: true
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ticket_metrics: {
-        Row: {
-          assignee_id: string | null
-          avg_resolution_time_hours: number | null
-          id: string
-          in_progress_tickets: number | null
-          last_updated: string | null
-          open_tickets: number | null
-          resolved_tickets: number | null
-          total_tickets: number | null
-        }
-        Insert: {
-          assignee_id?: string | null
-          avg_resolution_time_hours?: number | null
-          id?: string
-          in_progress_tickets?: number | null
-          last_updated?: string | null
-          open_tickets?: number | null
-          resolved_tickets?: number | null
-          total_tickets?: number | null
-        }
-        Update: {
-          assignee_id?: string | null
-          avg_resolution_time_hours?: number | null
-          id?: string
-          in_progress_tickets?: number | null
-          last_updated?: string | null
-          open_tickets?: number | null
-          resolved_tickets?: number | null
-          total_tickets?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_metrics_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tickets: {
         Row: {
           assignee_id: string | null
@@ -495,7 +401,7 @@ export type Database = {
       }
     }
     Enums: {
-      ticket_priority: "low" | "medium" | "high" | "critical"
+      ticket_priority: "low" | "medium" | "high"
       ticket_status: "open" | "in_progress" | "closed"
       user_role: "customer" | "agent" | "admin"
     }
