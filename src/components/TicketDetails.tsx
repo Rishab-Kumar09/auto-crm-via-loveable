@@ -177,7 +177,8 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       const { data, error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id);
+        .match({ id: ticket.id })
+        .select();
 
       if (error) {
         console.error("Update error:", {
