@@ -3,20 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const AgentPerformance = () => {
-  const { data: performance } = useQuery({
+  const { data: performance = {
+    total_tickets: 0,
+    resolved_tickets: 0,
+    avg_resolution_time_hours: 0,
+    avg_rating: 0
+  }} = useQuery({
     queryKey: ['agentPerformance'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('agent_performance')
         .select('*')
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      return data;
+      return data || {
+        total_tickets: 0,
+        resolved_tickets: 0,
+        avg_resolution_time_hours: 0,
+        avg_rating: 0
+      };
     },
   });
-
-  if (!performance) return null;
 
   return (
     <Card className="mt-6">
@@ -42,7 +49,7 @@ const AgentPerformance = () => {
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">Customer Rating</p>
             <p className="text-2xl font-bold">
-              {performance.avg_rating.toFixed(1)}/5
+              {Number(performance.avg_rating).toFixed(1)}/5
             </p>
           </div>
         </div>

@@ -11,7 +11,12 @@ import { useQuery } from "@tanstack/react-query";
 const Dashboard = () => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
 
-  const { data: ticketMetrics } = useQuery({
+  const { data: ticketMetrics = {
+    total_tickets: 0,
+    open_tickets: 0,
+    in_progress_tickets: 0,
+    resolved_tickets: 0
+  }} = useQuery({
     queryKey: ['ticketMetrics'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -21,25 +26,34 @@ const Dashboard = () => {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profile?.role === 'agent') {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('ticket_metrics')
           .select('*')
           .eq('assignee_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-        return data;
+        return data || {
+          total_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0,
+          resolved_tickets: 0
+        };
       }
 
       // For admins and customers, get overall stats
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('tickets')
         .select('status');
 
-      if (error) throw error;
+      if (!data) return {
+        total_tickets: 0,
+        open_tickets: 0,
+        in_progress_tickets: 0,
+        resolved_tickets: 0
+      };
 
       const stats = data.reduce((acc, ticket) => {
         acc.total_tickets++;
@@ -61,7 +75,7 @@ const Dashboard = () => {
           .from('profiles')
           .select('role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
