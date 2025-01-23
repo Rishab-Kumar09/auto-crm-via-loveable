@@ -129,42 +129,19 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       if (userError) throw userError;
       if (!user) throw new Error("No user found");
 
-      const { data: commentData, error } = await supabase
+      const { error } = await supabase
         .from("comments")
         .insert([
           {
             ticket_id: ticket.id,
             user_id: user.id,
             content: newComment,
-          },
-        ])
-        .select(`
-          *,
-          user:profiles!comments_user_id_fkey (
-            id,
-            full_name,
-            email,
-            role
-          )
-        `)
-        .single();
+          }
+        ]);
 
       if (error) throw error;
 
-      const formattedComment: TicketComment = {
-        id: commentData.id,
-        ticketId: commentData.ticket_id,
-        content: commentData.content,
-        user: {
-          id: commentData.user.id,
-          name: commentData.user.full_name,
-          email: commentData.user.email,
-          role: commentData.user.role as UserRole,
-        },
-        created_at: new Date(commentData.created_at).toLocaleString(),
-      };
-
-      setComments([...comments, formattedComment]);
+      fetchComments();
       setNewComment("");
       toast({
         title: "Success",
@@ -206,28 +183,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   };
 
   const handleCloseTicket = async () => {
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ status: 'closed' })
-        .eq('id', ticket.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Ticket closed successfully.",
-      });
-
-      onClose();
-    } catch (error) {
-      console.error("Error closing ticket:", error);
-      toast({
-        title: "Error",
-        description: "Failed to close ticket. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await handleUpdateTicket({ status: 'closed' });
   };
 
   const canManageTicketStatus = userRole === 'admin' || userRole === 'agent';
