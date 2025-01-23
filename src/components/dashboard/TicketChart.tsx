@@ -48,11 +48,10 @@ const TicketChart = ({ data }: TicketChartProps) => {
               <Bar
                 dataKey="value"
                 radius={[4, 4, 0, 0]}
-                fillOpacity={0.9}
               >
                 {chartData.map((entry) => (
                   <Cell 
-                    key={`cell-${entry.status}`}
+                    key={entry.name}
                     fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
                   />
                 ))}
