@@ -50,9 +50,9 @@ const TicketChart = ({ data }: TicketChartProps) => {
                 radius={[4, 4, 0, 0]}
                 fillOpacity={0.9}
               >
-                {chartData.map((entry, index) => (
+                {chartData.map((entry) => (
                   <Cell 
-                    key={`cell-${index}`}
+                    key={`cell-${entry.status}`}
                     fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
                   />
                 ))}
