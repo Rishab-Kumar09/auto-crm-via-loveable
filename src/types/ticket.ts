@@ -21,7 +21,8 @@ export interface Ticket {
   title: string;
   description: string | null;
   customer: User;
-  assignee_id: string | null;  // Added this field
+  assignee_id: string | null;
+  assignedTo?: User;  // Making this optional since not all tickets have an assigned agent
   company?: Company;
   status: TicketStatus;
   priority: TicketPriority;

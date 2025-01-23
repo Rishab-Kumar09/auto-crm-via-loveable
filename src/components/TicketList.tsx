@@ -29,7 +29,6 @@ const TicketList = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const searchQuery = searchParams.get("q")?.toLowerCase();
 
-  // Fetch tickets function
   const fetchTickets = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -76,7 +75,7 @@ const TicketList = () => {
 
       if (error) throw error;
 
-      const formattedTickets = ticketsData.map((ticket: any) => ({
+      const formattedTickets: Ticket[] = ticketsData.map((ticket: any) => ({
         id: ticket.id,
         title: ticket.title,
         description: ticket.description,
@@ -88,6 +87,7 @@ const TicketList = () => {
           email: ticket.customer.email,
           role: ticket.customer.role as UserRole,
         },
+        assignee_id: ticket.assignee_id,
         ...(ticket.assignedTo && {
           assignedTo: {
             id: ticket.assignedTo.id,
