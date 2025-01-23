@@ -18,21 +18,38 @@ const TicketForm = () => {
     setIsSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not found");
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("Not authenticated");
 
+      // Get user's profile to ensure they're a customer
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (!profile) throw new Error("Profile not found");
+      if (profile.role !== "customer") throw new Error("Only customers can create tickets");
+
+      // Create the ticket
       const { error: ticketError } = await supabase
         .from("tickets")
-        .insert([
-          {
-            title,
-            description,
-            customer_id: user.id,
-            company_id: companyId,
-          },
-        ]);
+        .insert({
+          title,
+          description,
+          customer_id: user.id,
+          company_id: companyId,
+          status: "open",
+          priority: "medium"
+        });
 
-      if (ticketError) throw ticketError;
+      if (ticketError) {
+        console.error("Ticket creation error:", ticketError);
+        throw new Error("Failed to create ticket. Please try again.");
+      }
 
       toast({
         title: "Success",
@@ -44,9 +61,10 @@ const TicketForm = () => {
       setDescription("");
       setCompanyId(null);
     } catch (error: any) {
+      console.error("Error creating ticket:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create ticket",
         variant: "destructive",
       });
     } finally {
