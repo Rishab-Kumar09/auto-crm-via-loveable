@@ -184,8 +184,15 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         if (!selectedAgent) {
           throw new Error('Selected agent not found');
         }
-        dbUpdates.assignee_id = selectedAgent.id;
-        delete dbUpdates.assignedTo;
+        dbUpdates = {
+          assignee_id: selectedAgent.id
+        };
+      }
+
+      if (updates.status) {
+        dbUpdates = {
+          status: updates.status
+        };
       }
 
       const { error } = await supabase
