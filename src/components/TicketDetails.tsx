@@ -159,15 +159,33 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
-      console.log("Updating ticket with:", updates);
-      const { error } = await supabase
+      console.log("Attempting to update ticket:", ticket.id, "with updates:", updates);
+      
+      // First verify the ticket exists
+      const { data: existingTicket, error: fetchError } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('id', ticket.id)
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching ticket:", fetchError);
+        throw fetchError;
+      }
+
+      if (!existingTicket) {
+        throw new Error("Ticket not found");
+      }
+
+      // Perform the update
+      const { error: updateError } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id);
 
-      if (error) {
-        console.error("Error updating ticket:", error);
-        throw error;
+      if (updateError) {
+        console.error("Error updating ticket:", updateError);
+        throw updateError;
       }
 
       toast({
@@ -322,7 +340,6 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       </div>
     </div>
   );
-
 };
 
 export default TicketDetails;
