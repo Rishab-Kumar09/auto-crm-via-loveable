@@ -9,14 +9,18 @@ const AgentPerformance = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Get agent's performance metrics
-      const { data: metrics } = await supabase
-        .from('agent_performance')
-        .select('*')
-        .eq('agent_id', user.id)
-        .single();
+      // Get agent's assigned tickets
+      const { data: tickets } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          feedback (
+            rating
+          )
+        `)
+        .eq('assignee_id', user.id);
 
-      if (!metrics) {
+      if (!tickets) {
         return {
           total_tickets: 0,
           resolved_tickets: 0,
@@ -27,7 +31,38 @@ const AgentPerformance = () => {
         };
       }
 
-      return metrics;
+      // Calculate metrics
+      const stats = {
+        total_tickets: tickets.length,
+        resolved_tickets: tickets.filter(t => t.status === 'closed').length,
+        open_tickets: tickets.filter(t => t.status === 'open').length,
+        in_progress_tickets: tickets.filter(t => t.status === 'in_progress').length,
+        avg_resolution_time_hours: 0,
+        avg_rating: 0
+      };
+
+      // Calculate average resolution time for closed tickets
+      const closedTickets = tickets.filter(t => t.status === 'closed');
+      if (closedTickets.length > 0) {
+        const totalHours = closedTickets.reduce((sum, ticket) => {
+          const created = new Date(ticket.created_at);
+          const updated = new Date(ticket.updated_at);
+          return sum + (updated.getTime() - created.getTime()) / (1000 * 60 * 60);
+        }, 0);
+        stats.avg_resolution_time_hours = Math.round(totalHours / closedTickets.length);
+      }
+
+      // Calculate average rating
+      const ratings = tickets
+        .filter(t => t.feedback && t.feedback.length > 0)
+        .map(t => t.feedback[0].rating)
+        .filter(r => r !== null);
+
+      if (ratings.length > 0) {
+        stats.avg_rating = Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1));
+      }
+
+      return stats;
     },
     refetchInterval: 5000,
   });

@@ -34,19 +34,14 @@ const Dashboard = () => {
         .maybeSingle();
 
       if (profile?.role === 'agent') {
-        // Get all tickets assigned to the agent through ticket_assignments
-        const { data: assignments, error } = await supabase
-          .from('ticket_assignments')
-          .select(`
-            ticket_id,
-            tickets (
-              status
-            )
-          `)
-          .eq('agent_id', user.id);
+        // Get all tickets assigned to the agent
+        const { data: tickets, error } = await supabase
+          .from('tickets')
+          .select('status')
+          .eq('assignee_id', user.id);
 
         if (error) {
-          console.error('Error fetching assignments:', error);
+          console.error('Error fetching tickets:', error);
           toast({
             title: "Error",
             description: "Failed to load ticket metrics",
@@ -60,13 +55,20 @@ const Dashboard = () => {
           };
         }
 
-        const tickets = assignments || [];
-        return {
-          total_tickets: tickets.length,
-          resolved_tickets: tickets.filter(t => t.tickets?.status === 'closed').length,
-          open_tickets: tickets.filter(t => t.tickets?.status === 'open').length,
-          in_progress_tickets: tickets.filter(t => t.tickets?.status === 'in_progress').length
-        };
+        const stats = (tickets || []).reduce((acc, ticket) => {
+          acc.total_tickets++;
+          if (ticket.status === 'closed') acc.resolved_tickets++;
+          if (ticket.status === 'open') acc.open_tickets++;
+          if (ticket.status === 'in_progress') acc.in_progress_tickets++;
+          return acc;
+        }, {
+          total_tickets: 0,
+          resolved_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0
+        });
+
+        return stats;
       }
 
       // For admins and customers, get overall stats
