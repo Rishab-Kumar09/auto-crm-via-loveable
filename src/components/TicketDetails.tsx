@@ -29,6 +29,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
   const [userRole, setUserRole] = useState<UserRole>("customer");
   const [assignedAgents, setAssignedAgents] = useState<{ id: string; name: string }[]>([]);
   const [currentStatus, setCurrentStatus] = useState<TicketStatus>(ticket.status);
+  const [currentPriority, setCurrentPriority] = useState<TicketPriority>(ticket.priority);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -185,6 +186,33 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
     }
   };
 
+  const handleUpdatePriority = async (newPriority: TicketPriority) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ priority: newPriority })
+        .eq('id', ticket.id);
+
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
+
+      setCurrentPriority(newPriority);
+      toast({
+        title: "Success",
+        description: "Ticket priority updated successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error updating ticket:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update ticket priority. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const canManageTicketStatus = userRole === 'admin' || userRole === 'agent';
 
   return (
@@ -230,22 +258,41 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           )}
 
           {canManageTicketStatus && (
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">Status</label>
-              <Select
-                value={currentStatus}
-                onValueChange={(value: TicketStatus) => handleUpdateTicket(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Set status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Status</label>
+                <Select
+                  value={currentStatus}
+                  onValueChange={(value: TicketStatus) => handleUpdateTicket(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Set status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Priority</label>
+                <Select
+                  value={currentPriority}
+                  onValueChange={(value: TicketPriority) => handleUpdatePriority(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Set priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
         </div>
 
@@ -254,14 +301,30 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
           <p className="mt-2 text-zendesk-muted">{ticket.description}</p>
         </div>
 
-        <div>
-          <h3 className="font-medium text-zendesk-secondary mb-2">Status</h3>
-          <Badge
-            variant="secondary"
-            className="bg-yellow-100 text-yellow-800"
-          >
-            {currentStatus.replace("_", " ")}
-          </Badge>
+        <div className="flex space-x-4">
+          <div>
+            <h3 className="font-medium text-zendesk-secondary mb-2">Status</h3>
+            <Badge
+              variant="secondary"
+              className="bg-yellow-100 text-yellow-800"
+            >
+              {currentStatus.replace("_", " ")}
+            </Badge>
+          </div>
+          <div>
+            <h3 className="font-medium text-zendesk-secondary mb-2">Priority</h3>
+            <Badge
+              variant="secondary"
+              className={`${
+                currentPriority === 'critical' ? 'bg-red-100 text-red-800' :
+                currentPriority === 'high' ? 'bg-orange-100 text-orange-800' :
+                currentPriority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-green-100 text-green-800'
+              }`}
+            >
+              {currentPriority}
+            </Badge>
+          </div>
         </div>
 
         <Separator />
