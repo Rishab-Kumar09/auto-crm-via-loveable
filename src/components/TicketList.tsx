@@ -45,7 +45,7 @@ const TicketList = () => {
         setUserRole(profile.role as UserRole);
       }
 
-      const query = supabase
+      let query = supabase
         .from('tickets')
         .select(`
           *,
@@ -69,12 +69,17 @@ const TicketList = () => {
 
       // For agents, only fetch assigned tickets
       if (profile?.role === 'agent') {
-        query.eq('assignee_id', user.id);
+        query = query.eq('assignee_id', user.id);
       }
 
       const { data: ticketsData, error } = await query;
 
       if (error) throw error;
+
+      if (!ticketsData) {
+        setTickets([]);
+        return;
+      }
 
       const formattedTickets = ticketsData.map((ticket: any) => ({
         id: ticket.id,
@@ -131,7 +136,7 @@ const TicketList = () => {
           .from('profiles')
           .select('role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
