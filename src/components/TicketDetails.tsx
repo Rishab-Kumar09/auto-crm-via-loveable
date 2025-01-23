@@ -164,13 +164,10 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       console.log("Ticket ID:", ticket.id);
       console.log("Update payload:", updates);
 
-      // Perform the update directly without verification
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tickets')
         .update(updates)
-        .eq('id', ticket.id)
-        .select()
-        .single();
+        .eq('id', ticket.id);
 
       if (error) {
         console.error("Supabase error details:", {
@@ -182,7 +179,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
         throw error;
       }
 
-      console.log("Update successful:", data);
+      console.log("Update successful");
 
       toast({
         title: "Success",
