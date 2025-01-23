@@ -159,12 +159,16 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
     try {
+      console.log("Updating ticket with:", updates);
       const { error } = await supabase
         .from('tickets')
         .update(updates)
         .eq('id', ticket.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating ticket:", error);
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -318,6 +322,7 @@ const TicketDetails = ({ ticket, onClose }: TicketDetailsProps) => {
       </div>
     </div>
   );
+
 };
 
 export default TicketDetails;
