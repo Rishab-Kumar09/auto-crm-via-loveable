@@ -6,14 +6,25 @@ const AgentPerformance = () => {
   const { data: performance } = useQuery({
     queryKey: ['agentPerformance'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('agent_performance')
         .select('*')
-        .single();
+        .eq('agent_id', user.id)
+        .maybeSingle();
       
-      if (error) throw error;
-      return data;
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      return data || {
+        total_tickets: 0,
+        resolved_tickets: 0,
+        avg_resolution_time_hours: 0,
+        avg_rating: 0
+      };
     },
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   if (!performance) return null;

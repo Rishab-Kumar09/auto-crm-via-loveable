@@ -17,35 +17,36 @@ const Dashboard = () => {
     queryKey: ['ticketMetrics'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
+      if (!user) {
+        console.error('No user found');
+        return {
+          total_tickets: 0,
+          resolved_tickets: 0,
+          open_tickets: 0,
+          in_progress_tickets: 0
+        };
+      }
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profile?.role === 'agent') {
-        // For agents, fetch their specific metrics
         const { data: metrics, error } = await supabase
           .from('ticket_metrics')
           .select('*')
           .eq('assignee_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching metrics:', error);
           toast({
             title: "Error",
             description: "Failed to load ticket metrics",
             variant: "destructive",
           });
-          return {
-            total_tickets: 0,
-            resolved_tickets: 0,
-            open_tickets: 0,
-            in_progress_tickets: 0
-          };
         }
 
         return metrics || {
@@ -86,7 +87,7 @@ const Dashboard = () => {
 
       return stats;
     },
-    refetchInterval: 5000, // Refresh every 5 seconds to ensure we have latest data
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 
   useEffect(() => {
@@ -97,7 +98,7 @@ const Dashboard = () => {
           .from('profiles')
           .select('role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profile) {
           setUserRole(profile.role as UserRole);
